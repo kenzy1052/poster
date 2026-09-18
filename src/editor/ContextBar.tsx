@@ -222,7 +222,7 @@ export function ContextBar({ el, onEditText, onCropImage }: Props) {
             onClick={() => useStore.getState().select(null)}
             className="absolute right-3 top-3 w-10 h-10 rounded-full bg-brand text-white shadow-md grid place-items-center active:bg-brand-dark"
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <IcCheck size={22} strokeWidth={2.5} />
           </button>
         </div>
       )}

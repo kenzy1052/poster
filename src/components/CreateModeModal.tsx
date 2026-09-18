@@ -1,6 +1,6 @@
 import React from 'react';
 import { IcSparkle, IcShapes, IcCheck } from '../ui/icons';
-import { ArrowRight, Wand2, Sliders } from 'lucide-react';
+import { ArrowRight, Wand2, Sliders, X } from 'lucide-react';
 
 interface CreateModeModalProps {
   onSelectSimple: () => void;
@@ -22,9 +22,9 @@ export function CreateModeModal({ onSelectSimple, onSelectAdvanced, onClose }: C
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-canvasbg text-ink-3 hover:text-ink grid place-items-center text-[18px] font-bold"
+            className="w-8 h-8 rounded-full bg-canvasbg text-ink-3 hover:text-ink grid place-items-center transition-colors"
           >
-            ✕
+            <X size={18} />
           </button>
         </div>
 
@@ -47,7 +47,7 @@ export function CreateModeModal({ onSelectSimple, onSelectAdvanced, onClose }: C
                   Simple Creator
                 </span>
                 <span className="block text-[12.5px] text-ink-2 mt-1 leading-snug">
-                  Just enter your title, text & handle. Instantly generates <strong>20+ ready-to-post designs</strong> for you to pick.
+                  Just enter your title, text & handle. Instantly generates <strong>25 ready-to-post designs</strong> for you to pick.
                 </span>
 
                 <div className="flex flex-wrap items-center gap-2 mt-2.5">
@@ -55,7 +55,7 @@ export function CreateModeModal({ onSelectSimple, onSelectAdvanced, onClose }: C
                     <IcCheck size={12} /> No design skills needed
                   </span>
                   <span className="inline-flex items-center gap-1 text-[11px] font-bold text-ink-2 bg-canvasbg px-2 py-0.5 rounded-md">
-                    20+ instant styles
+                    25 instant styles
                   </span>
                 </div>
               </div>

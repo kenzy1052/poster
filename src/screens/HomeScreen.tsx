@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { IcPlus, IcSparkle, IcFolder, IcAt } from '../ui/icons';
+import { IcPlus, IcSparkle, IcFolder } from '../ui/icons';
 import { LiveThumbnail } from '../components/LiveThumbnail';
 import { CreateModeModal } from '../components/CreateModeModal';
-import { Wand2, Sliders } from 'lucide-react';
+import { Wand2, Sliders, Settings } from 'lucide-react';
 
 interface HomeScreenProps {
   onCreateSimple: () => void;
@@ -86,7 +86,7 @@ export function HomeScreen({
         </button>
         <button onClick={onProfile} className="bg-surface rounded-3xl p-4 text-left active:bg-line/50 border border-line/60">
           <span className="w-10 h-10 rounded-2xl bg-canvasbg grid place-items-center text-ink mb-2.5">
-            <IcAt size={20} />
+            <Settings size={20} />
           </span>
           <span className="block text-[14px] font-bold text-ink">Settings</span>
           <span className="block text-[12px] text-ink-3 truncate">{handle || 'Set your handle'}</span>

@@ -44,21 +44,32 @@ export function SizeScreen({
       </div>
 
       <div className="px-5 space-y-3">
-        {CANVAS_SIZES.map((s) => (
-          <button
-            key={s.key}
-            onClick={() => onPick(s)}
-            className="w-full bg-surface rounded-3xl p-4 flex items-center gap-4 text-left active:bg-line/40 border border-line/60 hover:border-brand/40 transition-colors"
-          >
-            <span className="w-24 h-28 grid place-items-center shrink-0">
-              <span className="bg-brand rounded-xl block" style={{ width: 62, height: (62 * s.height) / s.width }} />
-            </span>
-            <span>
-              <span className="block text-[17px] font-bold text-ink">{s.label}</span>
-              <span className="block text-[12.5px] text-ink-3 mt-0.5">{s.note}</span>
-            </span>
-          </button>
-        ))}
+        {CANVAS_SIZES.map((s) => {
+          const ratio = s.height / s.width;
+          const maxBoxW = 54;
+          const maxBoxH = 80;
+          let w = maxBoxW;
+          let h = Math.round(w * ratio);
+          if (h > maxBoxH) {
+            h = maxBoxH;
+            w = Math.round(h / ratio);
+          }
+          return (
+            <button
+              key={s.key}
+              onClick={() => onPick(s)}
+              className="w-full bg-surface rounded-3xl p-4 flex items-center gap-4 text-left active:bg-line/40 border border-line/60 hover:border-brand/40 transition-colors"
+            >
+              <span className="w-24 h-24 grid place-items-center shrink-0">
+                <span className="bg-brand rounded-xl block transition-all" style={{ width: w, height: h }} />
+              </span>
+              <span>
+                <span className="block text-[17px] font-bold text-ink">{s.label}</span>
+                <span className="block text-[12.5px] text-ink-3 mt-0.5">{s.note}</span>
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {onSwitchToSimple && (

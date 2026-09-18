@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Edit3, Crop, Check } from 'lucide-react';
+import { Edit3, Crop, Check, RotateCw, Move, MoreHorizontal } from 'lucide-react';
 import { DesignElement, Project, TextElement } from '../types';
 import { useStore } from '../store/useStore';
 import { BackgroundView, ElementView } from '../render/Render';
@@ -666,7 +666,7 @@ function Selection({
         );
       })}
 
-      {/* Rotation Knob */}
+      {/* Rotate Knob */}
       <div
         data-handle="rotate"
         className="before:content-[''] before:absolute before:-inset-2 before:z-10"
@@ -678,9 +678,7 @@ function Selection({
           cursor: 'grab',
         }}
       >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#F02D63" strokeWidth="2.2" strokeLinecap="round">
-          <path d="M4.6 12a7.4 7.4 0 1 0 2.2-5.2" /><path d="M4 4.4v4h4" />
-        </svg>
+        <RotateCw size={12} color="#F02D63" strokeWidth={2.2} />
       </div>
 
       {/* Move Knob (Crosshair) */}
@@ -695,9 +693,7 @@ function Selection({
           cursor: 'move',
         }}
       >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#F02D63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="19 9 22 12 19 15"></polyline><polyline points="9 19 12 22 15 19"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line>
-        </svg>
+        <Move size={12} color="#F02D63" strokeWidth={2.2} />
       </div>
 
       {/* Floating Quick Action Bar */}
@@ -771,11 +767,7 @@ function Selection({
           className="p-1.5 rounded-full active:bg-white/15 text-white/90"
           title="More options"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="5" cy="12" r="2" />
-            <circle cx="12" cy="12" r="2" />
-            <circle cx="19" cy="12" r="2" />
-          </svg>
+          <MoreHorizontal size={18} />
         </button>
       </div>
     </div>

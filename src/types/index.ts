@@ -2,7 +2,7 @@
 // Core model. Every template is a list of these elements — never a flat image.
 // ---------------------------------------------------------------------------
 
-export type CanvasKey = 'square' | 'portrait';
+export type CanvasKey = 'square' | 'portrait' | 'three-four' | 'story';
 
 export interface CanvasSize {
   key: CanvasKey;
@@ -12,10 +12,12 @@ export interface CanvasSize {
   height: number;
 }
 
-/** 1:1 = 1080×1080. Portrait = 4in × 4.8in at 270ppi = 1080×1296. */
+/** Canvas sizes supporting 1:1, 4:5, 3:4, and 9:16 aspect ratios */
 export const CANVAS_SIZES: CanvasSize[] = [
-  { key: 'square', label: 'Square', note: '1:1 · 1080 × 1080', width: 1080, height: 1080 },
-  { key: 'portrait', label: 'Portrait', note: '4 × 4.8 in · 1080 × 1296', width: 1080, height: 1296 },
+  { key: 'square', label: 'Square (1:1)', note: '1:1 · 1080 × 1080', width: 1080, height: 1080 },
+  { key: 'portrait', label: 'Portrait (4:5)', note: '4:5 · 1080 × 1296', width: 1080, height: 1296 },
+  { key: 'three-four', label: 'Vertical (3:4)', note: '3:4 · 1080 × 1440', width: 1080, height: 1440 },
+  { key: 'story', label: 'Story (9:16)', note: '9:16 · 1080 × 1920', width: 1080, height: 1920 },
 ];
 
 export type ElementType = 'text' | 'image' | 'shape' | 'decor';

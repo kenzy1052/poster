@@ -257,7 +257,7 @@ const paperSerif: Build = (c) => ({
 // ===========================================================================
 const sportsQuote: Build = (c) => ({
   background: imageBg(
-    'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1200&auto=format&fit=crop&q=80',
     '#05070D',
     0.15,
     '#000000'
@@ -343,163 +343,10 @@ const sportsQuote: Build = (c) => ({
   profile: { x: 6, y: 4.5, align: 'left', onDark: true },
 });
 
-// ===========================================================================
-// 18 — Editorial Brand Mission (GMJ Glamour Wear Reference)
-// ===========================================================================
-const glamourMission: Build = (c) => ({
-  background: imageBg(
-    'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=1200&auto=format&fit=crop&q=80',
-    '#EBE7DE',
-    0.2,
-    '#FAF8F5'
-  ),
-  elements: stack([
-    // Clothes hanger icon at top center
-    decor('hanger', {
-      ...B(c, 46.5, 5, 7, 5),
-      color: '#111827',
-      strokeWidth: 3.5,
-      name: 'Hanger Icon',
-    }),
-    // Brand Lockup: GMJ text + Glamour Wear badge
-    text('headline', {
-      ...B(c, 34, 10, 16, 7),
-      text: 'GMJ',
-      fontFamily: 'Space Grotesk',
-      fontSize: F(c, 62),
-      fontWeight: 800,
-      color: '#111827',
-      align: 'right',
-      vAlign: 'middle',
-      name: 'Brand Initials',
-    }),
-    shape({
-      ...B(c, 51.5, 10.5, 15, 6),
-      shape: 'rect',
-      fill: '#111827',
-      radius: F(c, 4),
-      name: 'Brand Badge Box',
-    }),
-    text('caption', {
-      ...B(c, 51.5, 10.5, 15, 6),
-      text: 'Glamour\nWear',
-      fontFamily: 'Plus Jakarta Sans',
-      fontSize: F(c, 18),
-      fontWeight: 700,
-      color: '#FFFFFF',
-      align: 'center',
-      vAlign: 'middle',
-      lineHeight: 1.1,
-      name: 'Brand Badge Text',
-    }),
-    // Kicker: "O U R ————"
-    text('kicker', {
-      ...B(c, 10, 24, 15, 4),
-      text: 'O U R',
-      fontFamily: 'Space Grotesk',
-      fontSize: F(c, 24),
-      fontWeight: 600,
-      letterSpacing: 8,
-      color: '#111827',
-      name: 'Kicker Text',
-    }),
-    shape({
-      ...B(c, 25, 26, 12, 0.2),
-      shape: 'line',
-      strokeColor: '#111827',
-      strokeWidth: 2,
-      name: 'Kicker Line',
-    }),
-    // Large elegant serif "Mission" headline
-    text('headline', {
-      ...B(c, 10, 28, 55, 14),
-      text: 'Mission',
-      fontFamily: 'Playfair Display',
-      fontSize: F(c, 106),
-      fontWeight: 700,
-      color: '#111827',
-      lineHeight: 1.05,
-      name: 'Mission Title',
-    }),
-    // Left-aligned quote slab icon
-    decor('quote-slab', {
-      ...B(c, 7, 45, 4.5, 3.5),
-      color: '#64635F',
-      name: 'Quote Icon',
-    }),
-    // Main Body: "GMJ Glamour Wear was built with one mission..."
-    text('body', {
-      ...B(c, 13, 44.5, 58, 15),
-      text: 'GMJ Glamour Wear was built with one mission: to supply QUALITY yet AFFORDABLE fashion that styles you and makes you fall in love with your fit.',
-      fontFamily: 'Plus Jakarta Sans',
-      fontSize: F(c, 27),
-      fontWeight: 500,
-      lineHeight: 1.5,
-      color: '#1F2937',
-      name: 'Mission Statement',
-    }),
-    // Subtle divider rule
-    shape({
-      ...B(c, 13, 62, 12, 0.2),
-      shape: 'line',
-      strokeColor: '#111827',
-      strokeWidth: 1.8,
-      name: 'Divider Rule',
-    }),
-    // Italic note / tagline
-    text('subhead', {
-      ...B(c, 13, 64.5, 58, 5),
-      text: 'Remember, how you dress is how you will be addressed.',
-      fontFamily: 'Playfair Display',
-      italic: true,
-      fontSize: F(c, 22),
-      color: '#374151',
-      name: 'Tagline Note',
-    }),
-    // Footer left: "GMJ GLAMOUR WEAR —————"
-    text('caption', {
-      ...B(c, 10, 91.5, 20, 3),
-      text: 'GMJ GLAMOUR WEAR',
-      fontFamily: 'Space Grotesk',
-      fontSize: F(c, 13),
-      fontWeight: 700,
-      letterSpacing: 2,
-      color: '#6B7280',
-      name: 'Footer Brand',
-    }),
-    shape({
-      ...B(c, 29, 93, 14, 0.2),
-      shape: 'line',
-      strokeColor: '#9CA3AF',
-      strokeWidth: 1.2,
-      name: 'Footer Line Left',
-    }),
-    // Footer right: carousel counter "01 / 05"
-    shape({
-      ...B(c, 75, 93, 6, 0.2),
-      shape: 'line',
-      strokeColor: '#111827',
-      strokeWidth: 1.5,
-      name: 'Counter Line',
-    }),
-    text('caption', {
-      ...B(c, 82, 91.5, 12, 3),
-      text: '01 / 05',
-      fontFamily: 'Space Grotesk',
-      fontSize: F(c, 15),
-      fontWeight: 700,
-      color: '#111827',
-      name: 'Slide Counter',
-    }),
-  ]),
-  profile: { x: 10, y: 91.5, align: 'left', onDark: false },
-});
-
 const T = (id: string, name: string, tag: string, build: Build): Template => ({ id, name, tag, build });
 
 export const TEMPLATES: Template[] = [
   T('sports-quote', 'Stadium 433 Quote', 'Sports', sportsQuote),
-  T('glamour-mission', 'Editorial Brand Mission', 'Fashion', glamourMission),
   T('ribbon-serif', 'Ribbon Serif', 'Editorial', PART1.ribbonSerif),
   T('mascot-point', 'Mascot Point', 'Carousel', PART1.mascotPoint),
   T('stencil-bold', 'Stencil Bold', 'Typography', PART1.stencilBold),

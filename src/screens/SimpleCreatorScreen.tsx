@@ -55,13 +55,13 @@ const SAMPLE_PRESETS = [
     category: 'LAMINE YAMAL',
   },
   {
-    label: '👔 Editorial Mission',
-    title: 'Mission',
-    body: 'GMJ Glamour Wear was built with one mission: to supply QUALITY yet AFFORDABLE fashion that styles you and makes you fall in love with your fit.',
-    category: 'Remember, how you dress is how you will be addressed.',
+    label: '✨ Focus & Craft',
+    title: 'Great work comes from sustained daily momentum.',
+    body: 'Show up every single day, build quietly, and let compounding do the heavy lifting. Consistency turns ambition into mastery.',
+    category: 'PRODUCTIVITY',
   },
   {
-    label: '✨ Clarity & Focus',
+    label: '🌿 Clarity & Depth',
     title: 'Simplicity is the ultimate sophistication.',
     body: 'When you remove what is unnecessary, what remains speaks with power and grace. Focus on one craft and do it well.',
     category: 'MINIMALISM',
@@ -90,12 +90,7 @@ const CURATED_BG_IMAGES = [
   {
     id: 'stadium-spotlight',
     name: 'Stadium Press',
-    url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'garment-studio',
-    name: 'Garment Studio',
-    url: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=1200&auto=format&fit=crop&q=80',
+    url: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1200&auto=format&fit=crop&q=80',
   },
   {
     id: 'mist-mountain',
@@ -386,38 +381,38 @@ export function SimpleCreatorScreen({
         <div className="flex items-center gap-1.5 mt-3 p-1 bg-canvasbg rounded-xl border border-line">
           <button
             onClick={() => setActiveTab('input')}
-            className={`flex-1 py-1.5 rounded-lg text-[12px] font-bold transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-1.5 rounded-lg text-[12px] font-bold transition-all flex items-center justify-center gap-1 ${
               activeTab === 'input'
                 ? 'bg-surface text-ink shadow-xs border border-line/60'
                 : 'text-ink-3 hover:text-ink'
             }`}
           >
-            <Edit3 size={13} />
-            <span>1. Content & Background</span>
+            <Edit3 size={13} className="shrink-0" />
+            <span>Content & Background</span>
           </button>
 
           <button
             onClick={() => setActiveTab('results')}
-            className={`flex-1 py-1.5 rounded-lg text-[12px] font-bold transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-1.5 rounded-lg text-[12px] font-bold transition-all flex items-center justify-center gap-1 ${
               activeTab === 'results'
                 ? 'bg-surface text-ink shadow-xs border border-line/60'
                 : 'text-ink-3 hover:text-ink'
             }`}
           >
-            <Sparkles size={13} className="text-brand" />
-            <span>2. 24 Ready Styles</span>
+            <Sparkles size={13} className="text-brand shrink-0" />
+            <span>25 Ready Styles</span>
           </button>
 
           <button
             onClick={() => setActiveTab('style-test')}
-            className={`flex-1 py-1.5 rounded-lg text-[12px] font-bold transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-1.5 rounded-lg text-[12px] font-bold transition-all flex items-center justify-center gap-1 ${
               activeTab === 'style-test'
                 ? 'bg-surface text-ink shadow-xs border border-line/60'
                 : 'text-ink-3 hover:text-ink'
             }`}
           >
-            <Gauge size={13} className="text-amber-500" />
-            <span>3. Style Test Lab</span>
+            <Gauge size={13} className="text-amber-500 shrink-0" />
+            <span>Style Test Lab</span>
           </button>
         </div>
       </header>
@@ -432,7 +427,7 @@ export function SimpleCreatorScreen({
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[11.5px] font-bold uppercase tracking-wide text-ink-3 flex items-center gap-1">
-                  <Lightbulb size={13} className="text-amber-500" /> Need ideas? Tap a sample
+                  <Lightbulb size={13} className="text-amber-500 shrink-0" /> Need ideas? Tap a sample
                 </span>
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
@@ -453,32 +448,45 @@ export function SimpleCreatorScreen({
               <label className="block text-[12px] font-bold text-ink mb-2">
                 Post Size / Aspect Ratio
               </label>
-              <div className="grid grid-cols-2 gap-2.5">
-                {CANVAS_SIZES.map((s) => (
-                  <button
-                    key={s.key}
-                    onClick={() => setCanvas(s)}
-                    className={`p-3 rounded-xl border-2 text-left transition-colors flex items-center gap-3 ${
-                      canvas.key === s.key
-                        ? 'border-brand bg-brand-soft/60'
-                        : 'border-line bg-canvasbg hover:bg-line/40'
-                    }`}
-                  >
-                    <div
-                      className={`rounded-md border-2 shrink-0 ${
-                        canvas.key === s.key ? 'border-brand bg-brand/20' : 'border-ink-3'
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {CANVAS_SIZES.map((s) => {
+                  const isSelected = canvas.key === s.key;
+                  // Proportional preview dimensions
+                  const ratio = s.height / s.width;
+                  let boxW = 20;
+                  let boxH = Math.round(20 * ratio);
+                  if (boxH > 28) {
+                    boxH = 28;
+                    boxW = Math.round(28 / ratio);
+                  }
+                  return (
+                    <button
+                      key={s.key}
+                      onClick={() => setCanvas(s)}
+                      className={`p-2.5 rounded-xl border-2 text-left transition-colors flex items-center gap-2.5 ${
+                        isSelected
+                          ? 'border-brand bg-brand-soft/60'
+                          : 'border-line bg-canvasbg hover:bg-line/40'
                       }`}
-                      style={{
-                        width: s.key === 'square' ? 24 : 20,
-                        height: s.key === 'square' ? 24 : 26,
-                      }}
-                    />
-                    <div>
-                      <span className="block text-[13px] font-bold text-ink">{s.label}</span>
-                      <span className="block text-[10.5px] text-ink-3">{s.note}</span>
-                    </div>
-                  </button>
-                ))}
+                    >
+                      <div className="w-6 h-7 grid place-items-center shrink-0">
+                        <div
+                          className={`rounded-xs border-2 ${
+                            isSelected ? 'border-brand bg-brand/30' : 'border-ink-3/70'
+                          }`}
+                          style={{
+                            width: boxW,
+                            height: boxH,
+                          }}
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="block text-[12.5px] font-bold text-ink truncate">{s.label}</span>
+                        <span className="block text-[10px] text-ink-3 truncate">{s.note}</span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
