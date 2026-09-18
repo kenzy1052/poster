@@ -180,7 +180,11 @@ export type DecorKind =
   | 'corner-frame'
   | 'underline-swash'
   | 'pointing-hand'
-  | 'hanging-sign';
+  | 'hanging-sign'
+  | 'push-pin'
+  | 'tweet-actions'
+  | 'gradient-scrim'
+  | 'hanger';
 
 export interface DecorElement extends BaseElement {
   type: 'decor';
@@ -207,6 +211,18 @@ export const solidBg = (color: string): Background => ({
   color,
   image: { src: null, zoom: 1, offsetX: 0, offsetY: 0 },
   adjust: defaultAdjust(),
+});
+
+export const imageBg = (
+  src: string | null,
+  color: string = '#090D16',
+  overlayOpacity: number = 0,
+  overlayColor: string = '#000000'
+): Background => ({
+  kind: 'image',
+  color,
+  image: { src, zoom: 1, offsetX: 0, offsetY: 0 },
+  adjust: { ...defaultAdjust(), overlayColor, overlayOpacity },
 });
 
 /** How the creator's identity shows up on the artwork. */

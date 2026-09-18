@@ -126,6 +126,55 @@ export function QuickEdit({
                   setBackground({ kind: 'image', image: { ...project.background.image, offsetY: v } });
                 }}
               />
+              <div className="pt-2 border-t border-line/60">
+                <span className="text-[12px] font-bold text-ink block mb-2">Overlay / Dim Background</span>
+                <div className="flex gap-2 mb-3">
+                  <button
+                    onClick={() => {
+                      snapshot();
+                      setBackground({
+                        kind: 'image',
+                        adjust: { ...project.background.adjust, overlayColor: '#000000' }
+                      });
+                    }}
+                    className={`flex-1 py-2 rounded-xl text-[12px] font-bold border transition-colors ${
+                      (project.background.adjust.overlayColor || '#000000') === '#000000'
+                        ? 'bg-ink text-white border-ink'
+                        : 'bg-surface text-ink-2 border-line'
+                    }`}
+                  >
+                    ⬛ Black Overlay
+                  </button>
+                  <button
+                    onClick={() => {
+                      snapshot();
+                      setBackground({
+                        kind: 'image',
+                        adjust: { ...project.background.adjust, overlayColor: '#FFFFFF' }
+                      });
+                    }}
+                    className={`flex-1 py-2 rounded-xl text-[12px] font-bold border transition-colors ${
+                      project.background.adjust.overlayColor === '#FFFFFF'
+                        ? 'bg-white text-ink border-ink shadow-xs'
+                        : 'bg-surface text-ink-2 border-line'
+                    }`}
+                  >
+                    ⬜ White Overlay
+                  </button>
+                </div>
+                <Slider
+                  label={`Dim Opacity (${Math.round((project.background.adjust.overlayOpacity || 0) * 100)}%)`}
+                  value={project.background.adjust.overlayOpacity || 0}
+                  min={0} max={0.95} step={0.05}
+                  onChange={(v) => {
+                    snapshot();
+                    setBackground({
+                      kind: 'image',
+                      adjust: { ...project.background.adjust, overlayOpacity: v }
+                    });
+                  }}
+                />
+              </div>
             </div>
           )}
           <div className="mt-4">

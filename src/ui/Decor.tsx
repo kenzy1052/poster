@@ -213,6 +213,139 @@ export function Decor({ el }: { el: DecorElement }) {
         </svg>
       );
 
+    case 'push-pin': {
+      const pinColor = c || '#DC2626';
+      return (
+        <svg viewBox="0 0 100 100" {...common}>
+          <defs>
+            <radialGradient id={`pin-grad-${el.id}`} cx="40%" cy="30%" r="70%">
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.5" />
+              <stop offset="40%" stopColor={pinColor} />
+              <stop offset="100%" stopColor="#7F1D1D" />
+            </radialGradient>
+            <filter id={`pin-shadow-${el.id}`} x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="3" dy="6" stdDeviation="3.5" floodColor="#000000" floodOpacity="0.32" />
+            </filter>
+          </defs>
+          <g filter={`url(#pin-shadow-${el.id})`}>
+            {/* Cast shadow onto surface */}
+            <ellipse cx="50" cy="86" rx="18" ry="5.5" fill="rgba(0,0,0,0.22)" />
+            {/* Metal needle tip */}
+            <polygon points="48.5,56 51.5,56 50,84" fill="#CBD5E1" stroke="#64748B" strokeWidth="0.8" />
+            {/* Pin body */}
+            <ellipse cx="50" cy="56" rx="20" ry="5.5" fill={pinColor} />
+            <path
+              d="M34,44 C34,51 40,56 50,56 C60,56 66,51 66,44 L62,24 C62,22 38,22 38,24 Z"
+              fill={`url(#pin-grad-${el.id})`}
+            />
+            {/* Pin head disc */}
+            <ellipse cx="50" cy="24" rx="24" ry="9" fill={`url(#pin-grad-${el.id})`} stroke="rgba(255,255,255,0.3)" strokeWidth="0.8" />
+            {/* Highlight gleam */}
+            <ellipse cx="44" cy="21" rx="12" ry="4.5" fill="#FFFFFF" opacity="0.45" />
+            <circle cx="41" cy="20" r="2.2" fill="#FFFFFF" opacity="0.85" />
+          </g>
+        </svg>
+      );
+    }
+
+    case 'tweet-actions': {
+      const iconColor = c || '#71767B';
+      return (
+        <svg viewBox="0 0 380 28" {...common}>
+          {/* Reply / Comment */}
+          <g transform="translate(0, 4)" fill="none" stroke={iconColor} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M1.75 11.25C1.75 6.003 6.003 1.75 11.25 1.75h1.5c5.247 0 9.5 4.253 9.5 9.5 0 5.247-4.253 9.5-9.5 9.5h-2.5l-4.5 3.5v-3.5h-1.5C3.39 20.75 1.75 16.497 1.75 11.25z" />
+          </g>
+          <text x="32" y="19" fill={iconColor} fontSize="13.5" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="500">
+            348
+          </text>
+
+          {/* Retweet */}
+          <g transform="translate(85, 4)" fill="none" stroke={iconColor} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4.5 3.5h11a3.5 3.5 0 0 1 3.5 3.5v3M19 18.5H8a3.5 3.5 0 0 1-3.5-3.5v-3" />
+            <polyline points="7.5 1 4.5 3.5 7.5 6" />
+            <polyline points="16 16 19 18.5 16 21" />
+          </g>
+          <text x="117" y="19" fill={iconColor} fontSize="13.5" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="500">
+            1.2K
+          </text>
+
+          {/* Like / Heart */}
+          <g transform="translate(175, 4)" fill="none" stroke={iconColor} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16.69 3.55a4.7 4.7 0 0 0-6.69 0L10 3.55l-.69-.69a4.7 4.7 0 0 0-6.69 6.69L10 16.89l7.38-7.34a4.7 4.7 0 0 0 0-6.69z" />
+          </g>
+          <text x="204" y="19" fill={iconColor} fontSize="13.5" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="500">
+            4.8K
+          </text>
+
+          {/* Bookmark */}
+          <g transform="translate(262, 4)" fill="none" stroke={iconColor} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 2.5h12a1.5 1.5 0 0 1 1.5 1.5v16.5l-7.5-4.5-7.5 4.5V4a1.5 1.5 0 0 1 1.5-1.5z" />
+          </g>
+          <text x="288" y="19" fill={iconColor} fontSize="13.5" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="500">
+            924
+          </text>
+
+          {/* Share */}
+          <g transform="translate(345, 4)" fill="none" stroke={iconColor} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3.5 11.5v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+            <polyline points="14.5 5.5 10.5 1.5 6.5 5.5" />
+            <line x1="10.5" y1="1.5" x2="10.5" y2="13.5" />
+          </g>
+        </svg>
+      );
+    }
+
+    case 'gradient-scrim': {
+      const topColor = el.color2 || '#000000';
+      const botColor = el.color || '#000000';
+      return (
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" {...common}>
+          <defs>
+            <linearGradient id={`scrim-${el.id}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={topColor} stopOpacity="0" />
+              <stop offset="35%" stopColor={botColor} stopOpacity="0.45" />
+              <stop offset="65%" stopColor={botColor} stopOpacity="0.9" />
+              <stop offset="100%" stopColor={botColor} stopOpacity="0.99" />
+            </linearGradient>
+          </defs>
+          <rect x="0" y="0" width="100" height="100" fill={`url(#scrim-${el.id})`} />
+        </svg>
+      );
+    }
+
+    case 'hanger': {
+      const strokeCol = el.color || '#111827';
+      return (
+        <svg viewBox="0 0 100 80" {...common}>
+          <path
+            d="M50 32 C50 20, 58 14, 52 8 C48 3, 41 8, 44 14 C46 18, 50 22, 50 32"
+            fill="none"
+            stroke={strokeCol}
+            strokeWidth={sw || 3.5}
+            strokeLinecap="round"
+          />
+          <path
+            d="M50 32 L12 62 C8 65, 10 70, 15 70 L85 70 C90 70, 92 65, 88 62 Z"
+            fill="none"
+            stroke={strokeCol}
+            strokeWidth={sw || 3.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <line
+            x1="16"
+            y1="68"
+            x2="84"
+            y2="68"
+            stroke={strokeCol}
+            strokeWidth={sw || 3}
+            strokeLinecap="round"
+          />
+        </svg>
+      );
+    }
+
     default:
       return null;
   }

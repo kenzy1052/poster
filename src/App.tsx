@@ -8,10 +8,11 @@ import { EditorScreen } from './screens/EditorScreen';
 import { PreviewScreen } from './screens/PreviewScreen';
 import { DesignsScreen } from './screens/DesignsScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { SimpleCreatorScreen } from './screens/SimpleCreatorScreen';
 import { ProfileSheet } from './editor/QuickEdit';
 import { TEMPLATES, getTemplate, blankDesign } from './utils/templates';
 
-type Screen = 'home' | 'size' | 'template' | 'editor' | 'preview' | 'designs' | 'settings';
+type Screen = 'home' | 'simple' | 'size' | 'template' | 'editor' | 'preview' | 'designs' | 'settings';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
@@ -76,13 +77,43 @@ export default function App() {
     <div className="h-[100dvh] w-full max-w-[520px] mx-auto bg-canvasbg overflow-hidden">
       {screen === 'home' && (
         <HomeScreen
-          onCreate={() => setScreen('size')}
+          onCreateSimple={() => setScreen('simple')}
+          onCreateAdvanced={() => setScreen('size')}
           onDesigns={() => setScreen('designs')}
           onProfile={() => setScreen('settings')}
         />
       )}
-      {screen === 'size' && <SizeScreen onBack={() => setScreen('home')} onPick={(s) => { setCanvas(s); setScreen('template'); }} />}
-      {screen === 'template' && <TemplateScreen canvas={canvas} onBack={() => setScreen('size')} onPick={start} />}
+      {screen === 'simple' && (
+        <SimpleCreatorScreen
+          onBack={() => setScreen('home')}
+          onSwitchToAdvanced={() => setScreen('size')}
+          onOpenInEditor={(proj) => {
+            create({
+              templateId: proj.templateId,
+              canvas: proj.canvas,
+              background: JSON.parse(JSON.stringify(proj.background)),
+              elements: JSON.parse(JSON.stringify(proj.elements)),
+              name: proj.name,
+            });
+            setScreen('editor');
+          }}
+        />
+      )}
+      {screen === 'size' && (
+        <SizeScreen
+          onBack={() => setScreen('home')}
+          onPick={(s) => { setCanvas(s); setScreen('template'); }}
+          onSwitchToSimple={() => setScreen('simple')}
+        />
+      )}
+      {screen === 'template' && (
+        <TemplateScreen
+          canvas={canvas}
+          onBack={() => setScreen('size')}
+          onPick={start}
+          onSwitchToSimple={() => setScreen('simple')}
+        />
+      )}
       {screen === 'editor' && <EditorScreen onBack={() => { close(); setScreen('home'); }} onPreview={() => setScreen('preview')} />}
       {screen === 'preview' && <PreviewScreen onBack={() => setScreen('editor')} />}
       {screen === 'designs' && <DesignsScreen onBack={() => setScreen('home')} />}

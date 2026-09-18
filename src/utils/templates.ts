@@ -1,4 +1,4 @@
-import { Background, CanvasSize, DesignElement, Template, solidBg } from '../types';
+import { Background, CanvasSize, DesignElement, Template, solidBg, imageBg } from '../types';
 import { decor, image, shape, stack, text } from './factory';
 import { B, F, PART1, identity } from './templatesA';
 
@@ -252,9 +252,254 @@ const paperSerif: Build = (c) => ({
   profile: { x: 50, y: 23, align: 'center', onDark: false },
 });
 
+// ===========================================================================
+// 17 — Stadium 433 Quote (Ballon d'Or Reference)
+// ===========================================================================
+const sportsQuote: Build = (c) => ({
+  background: imageBg(
+    'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&auto=format&fit=crop&q=80',
+    '#05070D',
+    0.15,
+    '#000000'
+  ),
+  elements: stack([
+    // Smooth dark gradient overlay at the bottom so text is crisp and punchy
+    decor('gradient-scrim', {
+      ...B(c, 0, 32, 100, 68),
+      color: '#000000',
+      color2: '#000000',
+      name: 'Bottom Dark Gradient',
+    }),
+    // Top-left handle replacing the "433" logo
+    text('handle', {
+      ...B(c, 6, 4.5, 40, 5),
+      text: '@yourhandle',
+      fontFamily: 'Montserrat',
+      fontSize: F(c, 34),
+      fontWeight: 900,
+      color: '#FFFFFF',
+      letterSpacing: 1.5,
+      uppercase: true,
+      name: 'Corner Handle',
+      shadow: { enabled: true, color: '#000000', opacity: 0.6, blur: 10, offsetX: 0, offsetY: 2 },
+    }),
+    // Centered modern double quote icon
+    decor('quote-slab', {
+      ...B(c, 47, 52, 6, 3.8),
+      color: '#FFFFFF',
+      name: 'Quote mark',
+      shadow: { enabled: true, color: '#000000', opacity: 0.5, blur: 8, offsetX: 0, offsetY: 2 },
+    }),
+    // Main Title: Uppercase bold headline
+    text('headline', {
+      ...B(c, 8, 58, 84, 15),
+      text: "BALLON D'OR IS FOR THE BEST PLAYER IN THE WORLD",
+      fontFamily: 'Montserrat',
+      fontSize: F(c, 52),
+      fontWeight: 900,
+      align: 'center',
+      color: '#FFFFFF',
+      lineHeight: 1.15,
+      uppercase: true,
+      name: 'Main Title',
+      shadow: { enabled: true, color: '#000000', opacity: 0.7, blur: 12, offsetX: 0, offsetY: 3 },
+    }),
+    // Content itself / quote in quotation marks
+    text('body', {
+      ...B(c, 8, 75, 84, 11),
+      text: '“The Ballon d’Or should not go to the winner of the Champions League or the one who scores the most goals.”',
+      fontFamily: 'Plus Jakarta Sans',
+      fontSize: F(c, 27),
+      fontWeight: 400,
+      align: 'center',
+      lineHeight: 1.45,
+      color: '#E5E7EB',
+      name: 'Quote Body',
+      shadow: { enabled: true, color: '#000000', opacity: 0.6, blur: 10, offsetX: 0, offsetY: 2 },
+    }),
+    // Person who made that quote in yellow pill
+    shape({
+      ...B(c, 34, 88, 32, 4.6),
+      shape: 'pill',
+      fill: '#FACC15',
+      radius: 999,
+      name: 'Author Pill Background',
+      shadow: { enabled: true, color: '#000000', opacity: 0.4, blur: 10, offsetX: 0, offsetY: 3 },
+    }),
+    text('cta', {
+      ...B(c, 34, 88, 32, 4.6),
+      text: 'LAMINE YAMAL',
+      fontFamily: 'Montserrat',
+      fontSize: F(c, 21),
+      fontWeight: 900,
+      align: 'center',
+      vAlign: 'middle',
+      color: '#000000',
+      uppercase: true,
+      letterSpacing: 2,
+      name: 'Author Name',
+    }),
+  ]),
+  profile: { x: 6, y: 4.5, align: 'left', onDark: true },
+});
+
+// ===========================================================================
+// 18 — Editorial Brand Mission (GMJ Glamour Wear Reference)
+// ===========================================================================
+const glamourMission: Build = (c) => ({
+  background: imageBg(
+    'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=1200&auto=format&fit=crop&q=80',
+    '#EBE7DE',
+    0.2,
+    '#FAF8F5'
+  ),
+  elements: stack([
+    // Clothes hanger icon at top center
+    decor('hanger', {
+      ...B(c, 46.5, 5, 7, 5),
+      color: '#111827',
+      strokeWidth: 3.5,
+      name: 'Hanger Icon',
+    }),
+    // Brand Lockup: GMJ text + Glamour Wear badge
+    text('headline', {
+      ...B(c, 34, 10, 16, 7),
+      text: 'GMJ',
+      fontFamily: 'Space Grotesk',
+      fontSize: F(c, 62),
+      fontWeight: 800,
+      color: '#111827',
+      align: 'right',
+      vAlign: 'middle',
+      name: 'Brand Initials',
+    }),
+    shape({
+      ...B(c, 51.5, 10.5, 15, 6),
+      shape: 'rect',
+      fill: '#111827',
+      radius: F(c, 4),
+      name: 'Brand Badge Box',
+    }),
+    text('caption', {
+      ...B(c, 51.5, 10.5, 15, 6),
+      text: 'Glamour\nWear',
+      fontFamily: 'Plus Jakarta Sans',
+      fontSize: F(c, 18),
+      fontWeight: 700,
+      color: '#FFFFFF',
+      align: 'center',
+      vAlign: 'middle',
+      lineHeight: 1.1,
+      name: 'Brand Badge Text',
+    }),
+    // Kicker: "O U R ————"
+    text('kicker', {
+      ...B(c, 10, 24, 15, 4),
+      text: 'O U R',
+      fontFamily: 'Space Grotesk',
+      fontSize: F(c, 24),
+      fontWeight: 600,
+      letterSpacing: 8,
+      color: '#111827',
+      name: 'Kicker Text',
+    }),
+    shape({
+      ...B(c, 25, 26, 12, 0.2),
+      shape: 'line',
+      strokeColor: '#111827',
+      strokeWidth: 2,
+      name: 'Kicker Line',
+    }),
+    // Large elegant serif "Mission" headline
+    text('headline', {
+      ...B(c, 10, 28, 55, 14),
+      text: 'Mission',
+      fontFamily: 'Playfair Display',
+      fontSize: F(c, 106),
+      fontWeight: 700,
+      color: '#111827',
+      lineHeight: 1.05,
+      name: 'Mission Title',
+    }),
+    // Left-aligned quote slab icon
+    decor('quote-slab', {
+      ...B(c, 7, 45, 4.5, 3.5),
+      color: '#64635F',
+      name: 'Quote Icon',
+    }),
+    // Main Body: "GMJ Glamour Wear was built with one mission..."
+    text('body', {
+      ...B(c, 13, 44.5, 58, 15),
+      text: 'GMJ Glamour Wear was built with one mission: to supply QUALITY yet AFFORDABLE fashion that styles you and makes you fall in love with your fit.',
+      fontFamily: 'Plus Jakarta Sans',
+      fontSize: F(c, 27),
+      fontWeight: 500,
+      lineHeight: 1.5,
+      color: '#1F2937',
+      name: 'Mission Statement',
+    }),
+    // Subtle divider rule
+    shape({
+      ...B(c, 13, 62, 12, 0.2),
+      shape: 'line',
+      strokeColor: '#111827',
+      strokeWidth: 1.8,
+      name: 'Divider Rule',
+    }),
+    // Italic note / tagline
+    text('subhead', {
+      ...B(c, 13, 64.5, 58, 5),
+      text: 'Remember, how you dress is how you will be addressed.',
+      fontFamily: 'Playfair Display',
+      italic: true,
+      fontSize: F(c, 22),
+      color: '#374151',
+      name: 'Tagline Note',
+    }),
+    // Footer left: "GMJ GLAMOUR WEAR —————"
+    text('caption', {
+      ...B(c, 10, 91.5, 20, 3),
+      text: 'GMJ GLAMOUR WEAR',
+      fontFamily: 'Space Grotesk',
+      fontSize: F(c, 13),
+      fontWeight: 700,
+      letterSpacing: 2,
+      color: '#6B7280',
+      name: 'Footer Brand',
+    }),
+    shape({
+      ...B(c, 29, 93, 14, 0.2),
+      shape: 'line',
+      strokeColor: '#9CA3AF',
+      strokeWidth: 1.2,
+      name: 'Footer Line Left',
+    }),
+    // Footer right: carousel counter "01 / 05"
+    shape({
+      ...B(c, 75, 93, 6, 0.2),
+      shape: 'line',
+      strokeColor: '#111827',
+      strokeWidth: 1.5,
+      name: 'Counter Line',
+    }),
+    text('caption', {
+      ...B(c, 82, 91.5, 12, 3),
+      text: '01 / 05',
+      fontFamily: 'Space Grotesk',
+      fontSize: F(c, 15),
+      fontWeight: 700,
+      color: '#111827',
+      name: 'Slide Counter',
+    }),
+  ]),
+  profile: { x: 10, y: 91.5, align: 'left', onDark: false },
+});
+
 const T = (id: string, name: string, tag: string, build: Build): Template => ({ id, name, tag, build });
 
 export const TEMPLATES: Template[] = [
+  T('sports-quote', 'Stadium 433 Quote', 'Sports', sportsQuote),
+  T('glamour-mission', 'Editorial Brand Mission', 'Fashion', glamourMission),
   T('ribbon-serif', 'Ribbon Serif', 'Editorial', PART1.ribbonSerif),
   T('mascot-point', 'Mascot Point', 'Carousel', PART1.mascotPoint),
   T('stencil-bold', 'Stencil Bold', 'Typography', PART1.stencilBold),

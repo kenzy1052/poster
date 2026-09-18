@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Sparkles, Trash2, Bookmark } from 'lucide-react';
+import { Sparkles, Trash2, Bookmark, Wand2 } from 'lucide-react';
 import { CanvasSize, Project } from '../types';
 import { TEMPLATES, blankDesign } from '../utils/templates';
 import { StaticDesign } from '../render/Render';
@@ -9,8 +9,13 @@ import { useStore } from '../store/useStore';
 const THUMB = 152;
 
 export function TemplateScreen({
-  canvas, onBack, onPick,
-}: { canvas: CanvasSize; onBack: () => void; onPick: (templateId: string) => void }) {
+  canvas, onBack, onPick, onSwitchToSimple,
+}: {
+  canvas: CanvasSize;
+  onBack: () => void;
+  onPick: (templateId: string) => void;
+  onSwitchToSimple?: () => void;
+}) {
   const [activeTab, setActiveTab] = useState<'all' | 'custom' | string>('all');
 
   const customTemplates = useStore((s) => s.customTemplates);
@@ -49,9 +54,20 @@ export function TemplateScreen({
 
   return (
     <div className="h-full bg-canvasbg flex flex-col">
-      <header className="flex items-center gap-2 px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] shrink-0">
-        <button onClick={onBack} className="w-10 h-10 rounded-full grid place-items-center text-ink"><IcBack size={22} /></button>
-        <span className="text-[13px] font-bold text-ink-3">Step 2 of 2</span>
+      <header className="flex items-center justify-between px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] shrink-0">
+        <div className="flex items-center gap-2">
+          <button onClick={onBack} className="w-10 h-10 rounded-full grid place-items-center text-ink"><IcBack size={22} /></button>
+          <span className="text-[13px] font-bold text-ink-3">Step 2 of 2</span>
+        </div>
+        {onSwitchToSimple && (
+          <button
+            onClick={onSwitchToSimple}
+            className="text-[12px] font-bold text-brand bg-brand-soft hover:bg-brand-soft/80 px-2.5 py-1 rounded-full flex items-center gap-1 transition-colors mr-2"
+          >
+            <Wand2 size={12} />
+            <span>Try Simple</span>
+          </button>
+        )}
       </header>
 
       <div className="px-5 pb-3 shrink-0">
@@ -63,9 +79,11 @@ export function TemplateScreen({
           {[
             { id: 'all', label: 'All' },
             { id: 'custom', label: `My Templates (${customTemplates.length})`, icon: <Bookmark size={13} /> },
+            { id: 'sports', label: 'Sports' },
+            { id: 'quote', label: 'Quote' },
+            { id: 'fashion', label: 'Fashion' },
             { id: 'editorial', label: 'Editorial' },
             { id: 'promo', label: 'Promo' },
-            { id: 'quote', label: 'Quote' },
           ].map((tab) => {
             const active = activeTab === tab.id;
             return (
