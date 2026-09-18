@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { DesignElement, Project } from '../types';
+import { Edit3, Crop, Check } from 'lucide-react';
+import { DesignElement, Project, TextElement } from '../types';
 import { useStore } from '../store/useStore';
 import { BackgroundView, ElementView } from '../render/Render';
 import { IcCopy, IcSwap, IcTrash, IcUp } from '../ui/icons';
+import { measureTextBox } from '../utils/measureText';
 
 const MIN_Z = 0.4;
 const MAX_Z = 4;
@@ -10,7 +12,7 @@ const SNAP = 14; // canvas px tolerance for centre/edge guides
 
 type Gesture =
   | { kind: 'none' }
-  | { kind: 'move'; id: string; sx: number; sy: number; ox: number; oy: number }
+  | { kind: 'move'; id: string; sx: number; sy: number; ox: number; oy: number; siblings: { id: string; ox: number; oy: number }[] }
   | { kind: 'resize'; id: string; handle: string; sx: number; sy: number; b: { x: number; y: number; w: number; h: number }; ratio: number }
   | { kind: 'rotate'; id: string; cx: number; cy: number; start: number; from: number }
   | { kind: 'pan'; sx: number; sy: number; ox: number; oy: number }
@@ -21,19 +23,29 @@ export interface CanvasHandle {
   fit: () => void;
   zoom: number;
   focusOn: (id: string) => void;
+  startEditText: (id: string) => void;
+  commitEdit: () => void;
 }
 
 interface Props {
   project: Project;
   onRequestImage: (id: string) => void;
+  onCropImage?: (id: string) => void;
   onEditingChange?: (editing: boolean) => void;
   handleRef?: React.MutableRefObject<CanvasHandle | null>;
 }
 
-export function EditorCanvas({ project, onRequestImage, onEditingChange, handleRef }: Props) {
+export function EditorCanvas({
+  project,
+  onRequestImage,
+  onCropImage,
+  onEditingChange,
+  handleRef,
+}: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const editorRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lastTapRef = useRef<{ id: string; time: number }>({ id: '', time: 0 });
 
   const selectedId = useStore((s) => s.selectedId);
   const select = useStore((s) => s.select);
@@ -47,6 +59,7 @@ export function EditorCanvas({ project, onRequestImage, onEditingChange, handleR
   const [zoom, setZoom] = useState(1); // multiplier on top of fitScale
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
   const [guides, setGuides] = useState<{ x?: number; y?: number }>({});
 
   const gesture = useRef<Gesture>({ kind: 'none' });
@@ -89,6 +102,49 @@ export function EditorCanvas({ project, onRequestImage, onEditingChange, handleR
     setPan(clampPan(p, z));
   }, [clampPan, pan]);
 
+  // ---- inline text editing methods -----------------------------------------
+  const startEdit = useCallback((id: string) => {
+    const el = project.elements.find((x) => x.id === id);
+    if (!el || el.type !== 'text') return;
+    snapshot();
+    setEditText((el as TextElement).text);
+    setEditingId(id);
+    // Re-fit the box height to the current text at the current width before
+    // showing the editor, so edit mode never opens on a stale/oversized box
+    // (that stale extra height is what read as a blank phantom second line).
+    const t = el as TextElement;
+    const fit = measureTextBox(t, { maxWidth: t.width });
+    if (Math.abs(fit.height - t.height) > 1) {
+      update(id, { height: fit.height } as any);
+    }
+  }, [project.elements, snapshot, update]);
+
+  const commitEdit = useCallback(() => {
+    if (editingId && textareaRef.current) {
+      const el = project.elements.find((e) => e.id === editingId) as TextElement;
+      const cleanText = editText.trim();
+      if (el && cleanText) {
+        const fit = measureTextBox({ ...el, text: cleanText });
+        update(editingId, { text: cleanText, width: fit.width, height: fit.height, autoFit: false } as any);
+      } else if (el && !cleanText) {
+        // If empty, reset
+        update(editingId, { text: 'Text', autoFit: false } as any);
+      }
+    }
+    setEditingId(null);
+  }, [editingId, editText, update, project]);
+
+  useEffect(() => {
+    if (editingId && textareaRef.current) {
+      const ta = textareaRef.current;
+      ta.focus();
+      // Place the caret at the end (Canva-style) rather than selecting
+      // everything — lets you just backspace and keep typing.
+      const len = ta.value.length;
+      ta.setSelectionRange(len, len);
+    }
+  }, [editingId]);
+
   useEffect(() => {
     if (!handleRef) return;
     handleRef.current = {
@@ -99,7 +155,6 @@ export function EditorCanvas({ project, onRequestImage, onEditingChange, handleR
         const el = project.elements.find((e) => e.id === id);
         const w = wrapRef.current;
         if (!el || !w) return;
-        // Zoom so the element fills a comfortable share of the viewport, then centre it.
         const target = Math.max(1, Math.min(3, (w.clientWidth * 0.55) / (el.width * fitScale)));
         const cx = el.x + el.width / 2 - project.canvas.width / 2;
         const cy = el.y + el.height / 2 - project.canvas.height / 2;
@@ -107,16 +162,12 @@ export function EditorCanvas({ project, onRequestImage, onEditingChange, handleR
         setPan(clampPan({ x: -cx * fitScale * target, y: -cy * fitScale * target }, target));
         select(id);
       },
+      startEditText: (id) => startEdit(id),
+      commitEdit: () => commitEdit(),
     };
-  }, [handleRef, zoom, applyZoom, project.elements, fitScale, clampPan, select, project.canvas]);
+  }, [handleRef, zoom, applyZoom, project.elements, fitScale, clampPan, select, project.canvas, startEdit, commitEdit]);
 
   useEffect(() => { onEditingChange?.(!!editingId); }, [editingId, onEditingChange]);
-
-  // ---- coordinate helpers --------------------------------------------------
-  const toCanvas = (clientX: number, clientY: number) => {
-    const r = stageRef.current!.getBoundingClientRect();
-    return { x: (clientX - r.left) / scale, y: (clientY - r.top) / scale };
-  };
 
   // ---- gestures ------------------------------------------------------------
   const onPointerDown = (e: React.PointerEvent) => {
@@ -136,7 +187,11 @@ export function EditorCanvas({ project, onRequestImage, onEditingChange, handleR
     }
 
     const target = e.target as HTMLElement;
-    const handle = target.dataset.handle;
+    // Use closest() rather than reading target.dataset directly — the move
+    // and rotate knobs contain an icon, so a tap that lands on the icon
+    // itself (not the bare div) was missing the handle and falling through
+    // to "tapped empty space", which deselected the layer.
+    const handle = target.closest('[data-handle]')?.getAttribute('data-handle') || undefined;
     if (handle && selected) {
       e.stopPropagation();
       snapshot();
@@ -148,12 +203,17 @@ export function EditorCanvas({ project, onRequestImage, onEditingChange, handleR
           start: (Math.atan2(e.clientY - cy, e.clientX - cx) * 180) / Math.PI,
           from: selected.rotation,
         };
+      } else if (handle === 'move') {
+        const siblings = selected.groupId
+          ? project.elements.filter((x) => x.groupId === selected.groupId && x.id !== selected.id).map((x) => ({ id: x.id, ox: x.x, oy: x.y }))
+          : [];
+        gesture.current = { kind: 'move', id: selected.id, sx: e.clientX, sy: e.clientY, ox: selected.x, oy: selected.y, siblings };
       } else {
         gesture.current = {
           kind: 'resize', id: selected.id, handle,
           sx: e.clientX, sy: e.clientY,
           b: { x: selected.x, y: selected.y, w: selected.width, h: selected.height },
-          ratio: selected.width / selected.height,
+          ratio: selected.width / Math.max(1, selected.height),
         };
       }
       (e.currentTarget as Element).setPointerCapture(e.pointerId);
@@ -162,12 +222,15 @@ export function EditorCanvas({ project, onRequestImage, onEditingChange, handleR
 
     const hitId = target.closest('[data-el]')?.getAttribute('data-el') || null;
     if (hitId) {
-      const el = project.elements.find((x) => x.id === hitId)!;
+      const el = project.elements.find((x) => x.id === hitId);
       if (editingId && editingId !== hitId) commitEdit();
       select(hitId);
-      if (!el.locked && editingId !== hitId) {
+      if (el && !el.locked && editingId !== hitId) {
         snapshot();
-        gesture.current = { kind: 'move', id: hitId, sx: e.clientX, sy: e.clientY, ox: el.x, oy: el.y };
+        const siblings = el.groupId
+          ? project.elements.filter((x) => x.groupId === el.groupId && x.id !== el.id).map((x) => ({ id: x.id, ox: x.x, oy: x.y }))
+          : [];
+        gesture.current = { kind: 'move', id: hitId, sx: e.clientX, sy: e.clientY, ox: el.x, oy: el.y, siblings };
       }
     } else {
       if (editingId) commitEdit();
@@ -198,6 +261,7 @@ export function EditorCanvas({ project, onRequestImage, onEditingChange, handleR
 
     if (g.kind === 'move') {
       const el = project.elements.find((x) => x.id === g.id)!;
+      if (!el) return;
       let nx = g.ox + (e.clientX - g.sx) / scale;
       let ny = g.oy + (e.clientY - g.sy) / scale;
       const next: { x?: number; y?: number } = {};
@@ -213,6 +277,10 @@ export function EditorCanvas({ project, onRequestImage, onEditingChange, handleR
 
       setGuides(next);
       update(g.id, { x: Math.round(nx), y: Math.round(ny) });
+      if (g.siblings.length) {
+        const dx = nx - g.ox, dy = ny - g.oy;
+        for (const sib of g.siblings) update(sib.id, { x: Math.round(sib.ox + dx), y: Math.round(sib.oy + dy) });
+      }
       return;
     }
 
@@ -220,19 +288,29 @@ export function EditorCanvas({ project, onRequestImage, onEditingChange, handleR
       const dx = (e.clientX - g.sx) / scale;
       const dy = (e.clientY - g.sy) / scale;
       let { x, y, w, h } = g.b;
-      if (g.handle.includes('e')) w = Math.max(28, g.b.w + dx);
-      if (g.handle.includes('w')) { w = Math.max(28, g.b.w - dx); x = g.b.x + g.b.w - w; }
-      if (g.handle.includes('s')) h = Math.max(28, g.b.h + dy);
-      if (g.handle.includes('n')) { h = Math.max(28, g.b.h - dy); y = g.b.y + g.b.h - h; }
-      // Corner handles keep the aspect ratio, which is what people expect
-      // when scaling a photo or a logo.
-      if (g.handle.length === 2) {
-        const el = project.elements.find((q) => q.id === g.id)!;
-        if (el.type === 'image' || el.type === 'decor') {
-          h = w / g.ratio;
+
+      if (g.handle.includes('e')) w = Math.max(16, g.b.w + dx);
+      if (g.handle.includes('w')) { w = Math.max(16, g.b.w - dx); x = g.b.x + g.b.w - w; }
+      if (g.handle.includes('s')) h = Math.max(16, g.b.h + dy);
+      if (g.handle.includes('n')) { h = Math.max(16, g.b.h - dy); y = g.b.y + g.b.h - h; }
+
+      const el = project.elements.find((q) => q.id === g.id);
+      const isRatioLocked = el?.lockAspectRatio || (g.handle.length === 2 && (el?.type === 'image' || el?.type === 'decor'));
+
+      if (isRatioLocked && g.ratio) {
+        if (g.handle === 'e' || g.handle === 'w') {
+          h = Math.max(16, Math.round(w / g.ratio));
+          y = g.b.y + (g.b.h - h) / 2;
+        } else if (g.handle === 'n' || g.handle === 's') {
+          w = Math.max(16, Math.round(h * g.ratio));
+          x = g.b.x + (g.b.w - w) / 2;
+        } else {
+          // Corner handles
+          h = Math.max(16, Math.round(w / g.ratio));
           if (g.handle.includes('n')) y = g.b.y + g.b.h - h;
         }
       }
+
       update(g.id, { x: Math.round(x), y: Math.round(y), width: Math.round(w), height: Math.round(h) });
       return;
     }
@@ -249,41 +327,30 @@ export function EditorCanvas({ project, onRequestImage, onEditingChange, handleR
     pointers.current.delete(e.pointerId);
     const g = gesture.current;
 
-    // A tap (no drag) on an already-selected text element starts editing —
-    // the same "tap it and type" behaviour people expect from Canva.
+    // Single tap vs Double tap:
+    // Single tap purely selects layer (moves/sizes).
+    // Double tap enters edit mode for text, or crop mode for image!
     if (!moved.current && g.kind === 'move') {
-      const el = project.elements.find((x) => x.id === g.id);
-      if (el?.type === 'text' && selectedId === g.id) startEdit(g.id);
-      if (el?.type === 'image' && selectedId === g.id) onRequestImage(g.id);
+      const now = Date.now();
+      const isDoubleTap = false; // User requested to disable double tap completely
+      lastTapRef.current = { id: g.id, time: now };
+
+      if (isDoubleTap) {
+        const el = project.elements.find((x) => x.id === g.id);
+        if (el?.type === 'text') {
+          startEdit(g.id);
+        } else if (el?.type === 'image') {
+          if (onCropImage) onCropImage(g.id);
+          else onRequestImage(g.id);
+        }
+      }
     }
 
     if (pointers.current.size === 0) gesture.current = { kind: 'none' };
     setGuides({});
   };
 
-  // ---- inline text editing -------------------------------------------------
-  const startEdit = (id: string) => {
-    snapshot();
-    setEditingId(id);
-    requestAnimationFrame(() => {
-      const node = editorRef.current;
-      if (!node) return;
-      node.focus();
-      const sel = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(node);
-      sel?.removeAllRanges();
-      sel?.addRange(range);
-    });
-  };
-
-  const commitEdit = () => {
-    const node = editorRef.current;
-    if (node && editingId) update(editingId, { text: node.innerText.replace(/\n$/, '') } as any);
-    setEditingId(null);
-  };
-
-  const editingEl = editingId ? project.elements.find((e) => e.id === editingId) : null;
+  const editingEl = editingId ? (project.elements.find((e) => e.id === editingId) as TextElement | undefined) : null;
 
   return (
     <div
@@ -323,6 +390,12 @@ export function EditorCanvas({ project, onRequestImage, onEditingChange, handleR
             {els.map((el) => {
               if (el.hidden) return null;
               const isEditing = editingId === el.id;
+              // Thin/small elements (a divider line, a small icon) get an
+              // invisible hit-slop so they're easy to grab by touch instead
+              // of needing a pixel-perfect tap inside a tiny box.
+              const MIN_TOUCH = 34;
+              const slopX = Math.max(0, (MIN_TOUCH / scale - el.width) / 2);
+              const slopY = Math.max(0, (MIN_TOUCH / scale - el.height) / 2);
               return (
                 <div
                   key={el.id}
@@ -332,59 +405,87 @@ export function EditorCanvas({ project, onRequestImage, onEditingChange, handleR
                     position: 'absolute', left: el.x, top: el.y, width: el.width, height: el.height,
                     transform: `rotate(${el.rotation}deg)`, opacity: el.opacity, zIndex: el.z,
                     visibility: isEditing ? 'hidden' : 'visible',
+                    pointerEvents: 'auto',
+                    cursor: 'move',
                   }}
                 >
+                  {(slopX > 0 || slopY > 0) && (
+                    <div
+                      data-el={el.id}
+                      style={{
+                        position: 'absolute',
+                        top: -slopY, bottom: -slopY, left: -slopX, right: -slopX,
+                        pointerEvents: 'auto',
+                      }}
+                    />
+                  )}
                   <ElementView el={el} />
                 </div>
               );
             })}
 
-            {/* Live inline editor — sits exactly where the text lives, so the
-                design updates under the user's finger as they type. */}
+            {/* Solid, forward-typing inline textarea that eliminates the backwards text bug */}
             {editingEl && editingEl.type === 'text' && (
               <div
                 style={{
-                  position: 'absolute', left: editingEl.x, top: editingEl.y,
-                  width: editingEl.width, height: editingEl.height,
-                  transform: `rotate(${editingEl.rotation}deg)`, zIndex: 9998,
+                  position: 'absolute',
+                  left: editingEl.x,
+                  top: editingEl.y,
+                  width: editingEl.width,
+                  minHeight: editingEl.height,
+                  height: 'auto',
+                  transform: `rotate(${editingEl.rotation}deg)`,
+                  zIndex: 9998,
                   display: 'flex',
                   alignItems: editingEl.vAlign === 'middle' ? 'center' : editingEl.vAlign === 'bottom' ? 'flex-end' : 'flex-start',
                   justifyContent: editingEl.align === 'center' ? 'center' : editingEl.align === 'right' ? 'flex-end' : 'flex-start',
                 }}
               >
-                <div
-                  ref={editorRef}
-                  contentEditable
-                  suppressContentEditableWarning
-                  onInput={(e) => update(editingEl.id, { text: (e.currentTarget as HTMLElement).innerText } as any)}
-                  onBlur={commitEdit}
-                  style={{
-                    fontFamily: `"${editingEl.fontFamily}", sans-serif`,
-                    fontSize: editingEl.fontSize,
-                    fontWeight: editingEl.fontWeight,
-                    fontStyle: editingEl.italic ? 'italic' : 'normal',
-                    textAlign: editingEl.align,
-                    color: editingEl.color,
-                    lineHeight: editingEl.lineHeight,
-                    letterSpacing: editingEl.letterSpacing,
-                    textTransform: editingEl.uppercase ? 'uppercase' : 'none',
-                    width: editingEl.highlight ? undefined : '100%',
-                    maxWidth: '100%',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    outline: 'none',
-                    caretColor: '#F02D63',
-                    ...(editingEl.highlight
-                      ? {
-                          background: editingEl.highlight.color,
-                          padding: `${editingEl.highlight.padY}px ${editingEl.highlight.padX}px`,
-                          borderRadius: editingEl.highlight.radius,
-                          display: 'inline-block',
-                        }
-                      : {}),
-                  }}
-                >
-                  {editingEl.text}
+                <div className="relative w-full h-full">
+                  <textarea
+                    ref={textareaRef}
+                    value={editText}
+                    onChange={(e) => {
+                      setEditText(e.target.value);
+                      e.target.style.height = 'auto';
+                      const newHeight = Math.max(editingEl.height, e.target.scrollHeight);
+                      e.target.style.height = `${newHeight}px`;
+                      update(editingEl.id, { text: e.target.value, height: newHeight, autoFit: false } as any);
+                    }}
+                    onBlur={commitEdit}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') commitEdit();
+                      // Enter inserts a new line, like Canva — the checkmark
+                      // below (or tapping away) is what finishes editing.
+                      e.stopPropagation();
+                    }}
+                    autoFocus
+                    spellCheck={false}
+                    style={{
+                      width: '100%',
+                      minHeight: editingEl.height,
+                      overflow: 'hidden',
+                      resize: 'none',
+                      background: editingEl.highlight ? editingEl.highlight.color : 'rgba(255,255,255,0.85)',
+                      border: '2px solid #F02D63',
+                      borderRadius: 6,
+                      fontFamily: `"${editingEl.fontFamily}", sans-serif`,
+                      fontSize: `${editingEl.fontSize}px`,
+                      fontWeight: editingEl.fontWeight,
+                      fontStyle: editingEl.italic ? 'italic' : 'normal',
+                      textAlign: editingEl.align,
+                      color: editingEl.color,
+                      lineHeight: editingEl.lineHeight,
+                      letterSpacing: `${editingEl.letterSpacing}px`,
+                      textTransform: editingEl.uppercase ? 'uppercase' : 'none',
+                      textDecorationLine: editingEl.underline && editingEl.strikethrough ? 'underline line-through' : editingEl.underline ? 'underline' : editingEl.strikethrough ? 'line-through' : 'none',
+                      padding: editingEl.highlight ? `${editingEl.highlight.padY}px ${editingEl.highlight.padX}px` : '0px',
+                      margin: 0,
+                      outline: 'none',
+                      caretColor: '#F02D63',
+                      boxShadow: '0 4px 20px rgba(240,45,99,0.25)',
+                    }}
+                  />
                 </div>
               </div>
             )}
@@ -397,16 +498,24 @@ export function EditorCanvas({ project, onRequestImage, onEditingChange, handleR
             )}
           </div>
 
-          {/* Selection chrome, drawn in screen space so handles stay finger-sized
-              no matter how far the user has zoomed in. */}
+          {/* Selection chrome with 8 handles and persistent border */}
           {selected && !editingId && (
-            <Selection el={selected} scale={scale} onQuick={{ del, duplicate, reorder, replace: onRequestImage }} />
+            <Selection
+              el={selected}
+              scale={scale}
+              onStartEdit={() => startEdit(selected.id)}
+              onCrop={() => onCropImage?.(selected.id)}
+              onQuick={{ del, duplicate, reorder, replace: onRequestImage }}
+            />
           )}
         </div>
       </div>
 
       {zoom !== 1 && (
-        <div className="absolute left-3 bottom-3 rounded-full bg-ink/80 text-white text-[11px] font-semibold px-2.5 py-1">
+        <div
+          className="absolute left-3 bottom-3 rounded-full bg-ink/80 text-white text-[11px] font-semibold px-2.5 py-1 backdrop-blur-sm"
+          style={{ pointerEvents: 'none' }}
+        >
           {Math.round(zoom * 100)}%
         </div>
       )}
@@ -415,48 +524,82 @@ export function EditorCanvas({ project, onRequestImage, onEditingChange, handleR
 }
 
 function Selection({
-  el, scale, onQuick,
+  el,
+  scale,
+  onStartEdit,
+  onCrop,
+  onQuick,
 }: {
-  el: DesignElement; scale: number;
-  onQuick: { del: (id: string) => void; duplicate: (id: string) => void; reorder: (id: string, d: 'front' | 'back' | 'up' | 'down') => void; replace: (id: string) => void };
+  el: DesignElement;
+  scale: number;
+  onStartEdit: () => void;
+  onCrop: () => void;
+  onQuick: {
+    del: (id: string) => void;
+    duplicate: (id: string) => void;
+    reorder: (id: string, d: 'front' | 'back' | 'up' | 'down') => void;
+    replace: (id: string) => void;
+  };
 }) {
   const box = { left: el.x * scale, top: el.y * scale, width: el.width * scale, height: el.height * scale };
-  const handles = el.type === 'text' ? (['w', 'e', 'nw', 'ne', 'sw', 'se'] as const) : (['nw', 'ne', 'sw', 'se'] as const);
+  // Full 8-handle set for rich Photoshop/Canva style resizing
+  const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as const;
 
   return (
     <div
-      className="absolute pointer-events-none"
-      style={{ ...box, transform: `rotate(${el.rotation}deg)`, zIndex: 10000 }}
+      data-selection-id={el.id}
+      className="absolute"
+      style={{ ...box, transform: `rotate(${el.rotation}deg)`, zIndex: 10000, pointerEvents: 'none' }}
     >
-      <div className="absolute inset-0 border-2 border-brand rounded-[3px]" />
+      {/* Selection outline border with data-el so clicking border maintains selection and allows dragging */}
+      <div
+        data-el={el.id}
+        className="absolute inset-0 border-2 border-brand rounded-[3px]"
+        style={{ pointerEvents: 'auto', cursor: 'move' }}
+      />
 
+      {/* 8 Resizing handles */}
       {handles.map((h) => {
+        const isCorner = h.length === 2;
         const style: React.CSSProperties = { position: 'absolute', pointerEvents: 'auto', touchAction: 'none' };
-        if (h.includes('n')) style.top = -9; else if (h.includes('s')) style.bottom = -9; else { style.top = '50%'; style.marginTop = -9; }
-        if (h.includes('w')) style.left = -9; else if (h.includes('e')) style.right = -9; else { style.left = '50%'; style.marginLeft = -9; }
-        const bar = h === 'w' || h === 'e';
+        if (h.includes('n')) style.top = -10;
+        else if (h.includes('s')) style.bottom = -10;
+        else { style.top = '50%'; style.marginTop = -10; }
+
+        if (h.includes('w')) style.left = -10;
+        else if (h.includes('e')) style.right = -10;
+        else { style.left = '50%'; style.marginLeft = -10; }
+
+        const isEW = h === 'w' || h === 'e';
+        const isNS = h === 'n' || h === 's';
+
         return (
           <div
             key={h}
             data-handle={h}
             style={{
               ...style,
-              width: bar ? 10 : 18, height: bar ? 26 : 18,
-              borderRadius: 999, background: '#fff',
+              width: isCorner ? 18 : isEW ? 10 : 22,
+              height: isCorner ? 18 : isEW ? 22 : 10,
+              borderRadius: 999,
+              background: '#fff',
               border: '2px solid #F02D63',
-              boxShadow: '0 1px 4px rgba(18,19,26,.25)',
+              boxShadow: '0 2px 5px rgba(18,19,26,.3)',
+              cursor: isCorner ? `${h}-resize` : isEW ? 'ew-resize' : 'ns-resize',
             }}
           />
         );
       })}
 
+      {/* Rotation Knob */}
       <div
         data-handle="rotate"
         style={{
           position: 'absolute', bottom: -44, left: '50%', marginLeft: -14,
           width: 28, height: 28, borderRadius: 999, background: '#fff',
           border: '2px solid #F02D63', pointerEvents: 'auto', touchAction: 'none',
-          display: 'grid', placeItems: 'center', boxShadow: '0 1px 4px rgba(18,19,26,.25)',
+          display: 'grid', placeItems: 'center', boxShadow: '0 2px 5px rgba(18,19,26,.3)',
+          cursor: 'grab',
         }}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F02D63" strokeWidth="2.2" strokeLinecap="round">
@@ -464,18 +607,99 @@ function Selection({
         </svg>
       </div>
 
-      {/* Floating quick actions, always above the selection and never rotated
-          with it so the buttons stay readable. */}
+      {/* Move Knob (Crosshair) */}
       <div
-        style={{ position: 'absolute', top: -52, left: '50%', transform: `translateX(-50%) rotate(${-el.rotation}deg)`, pointerEvents: 'auto' }}
-        className="flex items-center gap-1 rounded-full bg-ink text-white px-1.5 py-1 shadow-lg"
+        data-handle="move"
+        style={{
+          position: 'absolute', bottom: -44, left: '50%', marginLeft: 18,
+          width: 28, height: 28, borderRadius: 999, background: '#fff',
+          border: '2px solid #F02D63', pointerEvents: 'auto', touchAction: 'none',
+          display: 'grid', placeItems: 'center', boxShadow: '0 2px 5px rgba(18,19,26,.3)',
+          cursor: 'move',
+        }}
       >
-        {el.type === 'image' && (
-          <button onPointerDown={(e) => e.stopPropagation()} onClick={() => onQuick.replace(el.id)} className="p-2 rounded-full active:bg-white/15"><IcSwap size={17} /></button>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F02D63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="19 9 22 12 19 15"></polyline><polyline points="9 19 12 22 15 19"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line>
+        </svg>
+      </div>
+
+      {/* Floating Quick Action Bar */}
+      <div
+        style={{
+          position: 'absolute',
+          top: -54,
+          left: '50%',
+          transform: `translateX(-50%) rotate(${-el.rotation}deg)`,
+          pointerEvents: 'auto',
+        }}
+        className="flex items-center gap-1 rounded-full bg-ink text-white px-2 py-1 shadow-xl border border-white/10 backdrop-blur-md"
+      >
+        {el.type === 'text' && (
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={onStartEdit}
+            className="px-2.5 py-1 rounded-full bg-brand text-white text-[12px] font-bold flex items-center gap-1 active:bg-brand-dark"
+          >
+            <Edit3 size={13} />
+            <span>Edit</span>
+          </button>
         )}
-        <button onPointerDown={(e) => e.stopPropagation()} onClick={() => onQuick.duplicate(el.id)} className="p-2 rounded-full active:bg-white/15"><IcCopy size={17} /></button>
-        <button onPointerDown={(e) => e.stopPropagation()} onClick={() => onQuick.reorder(el.id, 'front')} className="p-2 rounded-full active:bg-white/15"><IcUp size={17} /></button>
-        <button onPointerDown={(e) => e.stopPropagation()} onClick={() => onQuick.del(el.id)} className="p-2 rounded-full active:bg-white/15 text-[#FF8E9E]"><IcTrash size={17} /></button>
+
+        {el.type === 'image' && (
+          <>
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={onCrop}
+              className="px-2.5 py-1 rounded-full bg-brand text-white text-[12px] font-bold flex items-center gap-1 active:bg-brand-dark"
+            >
+              <Crop size={13} />
+              <span>Crop</span>
+            </button>
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => onQuick.replace(el.id)}
+              className="p-1.5 rounded-full active:bg-white/15 text-white/90"
+              title="Replace image"
+            >
+              <IcSwap size={16} />
+            </button>
+          </>
+        )}
+
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => onQuick.duplicate(el.id)}
+          className="p-1.5 rounded-full active:bg-white/15 text-white/90"
+          title="Duplicate"
+        >
+          <IcCopy size={16} />
+        </button>
+
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => onQuick.del(el.id)}
+          className="p-1.5 rounded-full active:bg-white/15 text-[#FF8E9E]"
+          title="Delete"
+        >
+          <IcTrash size={16} />
+        </button>
+
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => {
+            // Trigger more menu
+            const ev = new CustomEvent('open-more-menu', { detail: { id: el.id } });
+            window.dispatchEvent(ev);
+          }}
+          className="p-1.5 rounded-full active:bg-white/15 text-white/90"
+          title="More options"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="5" cy="12" r="2" />
+            <circle cx="12" cy="12" r="2" />
+            <circle cx="19" cy="12" r="2" />
+          </svg>
+        </button>
       </div>
     </div>
   );

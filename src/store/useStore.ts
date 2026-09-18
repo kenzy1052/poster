@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuid } from 'uuid';
-import { Background, CanvasSize, DesignElement, Project, ProfileMode } from '../types';
+import { Background, CanvasSize, CustomTemplate, DesignElement, Project, ProfileMode } from '../types';
 
 type Snapshot = { background: Background; elements: DesignElement[] };
 
 interface State {
   projects: Project[];
+  customTemplates: CustomTemplate[];
   currentId: string | null;
   selectedId: string | null;
   /** Saved once, reused on every new design. */
@@ -23,6 +24,9 @@ interface State {
   rename: (id: string, name: string) => void;
   setThumb: (id: string, url: string) => void;
 
+  saveCustomTemplate: (name: string, tag?: string) => string | null;
+  deleteCustomTemplate: (id: string) => void;
+
   current: () => Project | undefined;
   snapshot: () => void;
   undo: () => void;
@@ -34,6 +38,16 @@ interface State {
   del: (id: string) => void;
   duplicate: (id: string) => void;
   reorder: (id: string, dir: 'front' | 'back' | 'up' | 'down') => void;
+  /** Assigns a shared groupId to every id passed in, so they move together. */
+  groupElements: (ids: string[]) => void;
+  /** Clears groupId from every element that shares this element's group. */
+  ungroupElements: (id: string) => void;
+  copyElement: (id: string) => void;
+  pasteElement: () => void;
+  copyStyle: (id: string) => void;
+  pasteStyle: (id: string) => void;
+  clipboardElement: DesignElement | null;
+  clipboardStyle: { type: string; style: any } | null;
   setBackground: (patch: Partial<Background>) => void;
   replaceDesign: (d: Snapshot) => void;
 
@@ -62,6 +76,7 @@ export const useStore = create<State>()(
   persist(
     (set, get) => ({
       projects: [],
+      customTemplates: [],
       currentId: null,
       selectedId: null,
       savedHandle: '',
@@ -69,6 +84,29 @@ export const useStore = create<State>()(
       savedProfileMode: 'handle-only',
       past: [],
       future: [],
+      clipboardElement: null,
+      clipboardStyle: null,
+
+      saveCustomTemplate: (name: string, tag = 'Custom') => {
+        const p = get().current();
+        if (!p) return null;
+        const newTemplate: CustomTemplate = {
+          id: `custom-${uuid()}`,
+          name: name.trim() || 'Custom Template',
+          tag: tag.trim() || 'Custom',
+          canvas: p.canvas,
+          background: JSON.parse(JSON.stringify(p.background)),
+          elements: JSON.parse(JSON.stringify(p.elements)),
+          createdAt: Date.now(),
+          thumbnail: p.thumbnail,
+        };
+        set((s) => ({ customTemplates: [newTemplate, ...s.customTemplates] }));
+        return newTemplate.id;
+      },
+
+      deleteCustomTemplate: (id: string) => {
+        set((s) => ({ customTemplates: s.customTemplates.filter((t) => t.id !== id) }));
+      },
 
       create: ({ templateId, canvas, background, elements, name }) => {
         const id = uuid();
@@ -179,6 +217,74 @@ export const useStore = create<State>()(
       setBackground: (patch) =>
         set((s) => ({ projects: patchProjects(s.projects, s.currentId, (p) => ({ ...p, background: { ...p.background, ...patch } })) })),
 
+      groupElements: (ids) => {
+        if (ids.length < 2) return;
+        get().snapshot();
+        const gid = uuid();
+        set((s) => ({
+          projects: patchProjects(s.projects, s.currentId, (p) => ({
+            ...p, elements: p.elements.map((e) => (ids.includes(e.id) ? { ...e, groupId: gid } : e)),
+          })),
+        }));
+      },
+
+      ungroupElements: (id) => {
+        get().snapshot();
+        set((s) => {
+          const p = s.current(); if (!p) return s;
+          const target = p.elements.find((e) => e.id === id);
+          const gid = target?.groupId;
+          if (!gid) return s;
+          return {
+            projects: patchProjects(s.projects, s.currentId, (x) => ({
+              ...x, elements: x.elements.map((e) => (e.groupId === gid ? { ...e, groupId: undefined } : e)),
+            })),
+          };
+        });
+      },
+
+      copyElement: (id) => {
+        const p = get().current(); if (!p) return;
+        const el = p.elements.find((e) => e.id === id); if (!el) return;
+        set({ clipboardElement: JSON.parse(JSON.stringify(el)) });
+      },
+
+      pasteElement: () => {
+        const ce = get().clipboardElement; if (!ce) return;
+        get().snapshot();
+        set((s) => {
+          const p = s.current(); if (!p) return s;
+          const maxZ = Math.max(...p.elements.map((e) => e.z), 0);
+          const copy = { ...ce, id: uuid(), x: ce.x + 24, y: ce.y + 24, z: maxZ + 1, groupId: undefined } as DesignElement;
+          return {
+            projects: patchProjects(s.projects, s.currentId, (x) => ({ ...x, elements: [...x.elements, copy] })),
+            selectedId: copy.id,
+          };
+        });
+      },
+
+      copyStyle: (id) => {
+        const p = get().current(); if (!p) return;
+        const el = p.elements.find((e) => e.id === id); if (!el) return;
+        const { id: _id, type, x, y, width, height, rotation, z, name, role, groupId, hidden, locked, ...rest } = el as any;
+        const style = { ...rest };
+        if (type === 'text') delete style.text;
+        if (type === 'image') delete style.src;
+        set({ clipboardStyle: { type, style } });
+      },
+
+      pasteStyle: (id) => {
+        const cs = get().clipboardStyle; if (!cs) return;
+        const p = get().current(); if (!p) return;
+        const el = p.elements.find((e) => e.id === id); if (!el || el.type !== cs.type) return;
+        get().snapshot();
+        set((s) => ({
+          projects: patchProjects(s.projects, s.currentId, (x) => ({
+            ...x, elements: x.elements.map((e) => (e.id === id ? ({ ...e, ...cs.style } as DesignElement) : e)),
+          })),
+        }));
+      },
+
       replaceDesign: (d) => {
         get().snapshot();
         set((s) => ({
@@ -220,6 +326,7 @@ export const useStore = create<State>()(
       name: 'ig-post-studio',
       partialize: (s) => ({
         projects: s.projects,
+        customTemplates: s.customTemplates,
         savedHandle: s.savedHandle,
         savedAvatar: s.savedAvatar,
         savedProfileMode: s.savedProfileMode,

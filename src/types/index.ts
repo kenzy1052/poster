@@ -80,6 +80,11 @@ export interface BaseElement {
   locked: boolean;
   opacity: number;
   shadow: ShadowStyle;
+  lockAspectRatio?: boolean;
+  /** Elements that share a groupId move together and can be ungrouped. */
+  groupId?: string;
+  /** Whole-layer blur in px — available on text and shapes, not just photos. */
+  blur?: number;
 }
 
 export interface TextElement extends BaseElement {
@@ -89,7 +94,7 @@ export interface TextElement extends BaseElement {
   fontSize: number;
   fontWeight: number;
   italic: boolean;
-  align: 'left' | 'center' | 'right';
+  align: 'left' | 'center' | 'right' | 'justify';
   vAlign: 'top' | 'middle' | 'bottom';
   color: string;
   lineHeight: number;
@@ -98,6 +103,18 @@ export interface TextElement extends BaseElement {
   autoFit: boolean;
   /** Optional highlight block behind the text (the marker-pen look). */
   highlight?: { color: string; padX: number; padY: number; radius: number };
+  underline?: boolean;
+  strikethrough?: boolean;
+  /** Browser font-kerning as a distinct on/off control from letter-spacing. */
+  kerning?: boolean;
+  list?: 'none' | 'bullet' | 'number';
+  scriptPosition?: 'normal' | 'super' | 'sub';
+  /** Outline / echo / neon style text effect, layered on top of shadow. */
+  textEffect?: {
+    kind: 'none' | 'outline' | 'echo' | 'neon';
+    color: string;
+    thickness: number;
+  };
 }
 
 export interface ImageElement extends BaseElement {
@@ -115,14 +132,30 @@ export interface ImageElement extends BaseElement {
   adjust: ImageAdjust;
 }
 
+export type ShapeKind =
+  | 'rect'
+  | 'circle'
+  | 'pill'
+  | 'triangle'
+  | 'pentagon'
+  | 'hexagon'
+  | 'octagon'
+  | 'star'
+  | 'polygon'
+  | 'line';
+
 export interface ShapeElement extends BaseElement {
   type: 'shape';
-  shape: 'rect' | 'circle' | 'pill' | 'line';
+  shape: ShapeKind;
   fill: string;
   fillOpacity: number;
   radius: number;
   strokeColor: string;
   strokeWidth: number;
+  strokeOpacity?: number;
+  strokeStyle?: 'solid' | 'dashed';
+  sides?: number;
+  imageFill?: { src: string; zoom: number; offsetX: number; offsetY: number };
 }
 
 /** Preset vector ornaments — the blobs, curves and quote marks in the refs. */
@@ -204,4 +237,15 @@ export interface Template {
     /** Where the handle/avatar live in this particular layout. */
     profile: { x: number; y: number; align: 'left' | 'center' | 'right'; onDark: boolean };
   };
+}
+
+export interface CustomTemplate {
+  id: string;
+  name: string;
+  tag: string;
+  createdAt: number;
+  canvas: CanvasSize;
+  background: Background;
+  elements: DesignElement[];
+  thumbnail?: string;
 }

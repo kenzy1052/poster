@@ -1,6 +1,8 @@
 {
   "name": "Post Studio",
-  "description": "Mobile Instagram post editor: 16 editable templates, tap-to-edit canvas, zoom, and 1080px JPEG export.",
+  "description": "Mobile Instagram and TikTok post editor with Canva and Photoshop-style layer selection, rich polygonal shapes, image cropping, and custom templates.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

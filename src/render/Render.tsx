@@ -1,5 +1,5 @@
 import React from 'react';
-import { Background, DesignElement, ImageAdjust, Project, TextElement } from '../types';
+import { Background, DesignElement, ImageAdjust, Project, ShapeElement, TextElement } from '../types';
 import { Decor } from '../ui/Decor';
 
 export function rgba(hex: string, a: number) {
@@ -15,12 +15,22 @@ const filt = (a: ImageAdjust) =>
   `blur(${a.blur}px) brightness(${a.brightness}%) contrast(${a.contrast}%) saturate(${a.saturate}%) grayscale(${a.grayscale}%)`;
 
 function shadowStyle(el: DesignElement): React.CSSProperties {
-  if (!el.shadow.enabled) return {};
-  const c = rgba(el.shadow.color, el.shadow.opacity);
-  if (el.type === 'text' || el.type === 'decor') {
-    return { filter: `drop-shadow(${el.shadow.offsetX}px ${el.shadow.offsetY}px ${el.shadow.blur / 2}px ${c})` };
+  const style: React.CSSProperties = {};
+  if (el.shadow.enabled) {
+    const c = rgba(el.shadow.color, el.shadow.opacity);
+    if (el.type === 'text' || el.type === 'decor') {
+      style.filter = `drop-shadow(${el.shadow.offsetX}px ${el.shadow.offsetY}px ${el.shadow.blur / 2}px ${c})`;
+    } else {
+      style.boxShadow = `${el.shadow.offsetX}px ${el.shadow.offsetY}px ${el.shadow.blur}px 0 ${c}`;
+    }
   }
-  return { boxShadow: `${el.shadow.offsetX}px ${el.shadow.offsetY}px ${el.shadow.blur}px 0 ${c}` };
+  // Whole-layer blur — available on any element type (text/shape included,
+  // not just photos, which already had their own Adjust-panel blur).
+  const blurPx = (el as { blur?: number }).blur || 0;
+  if (blurPx > 0) {
+    style.filter = style.filter ? `${style.filter} blur(${blurPx}px)` : `blur(${blurPx}px)`;
+  }
+  return style;
 }
 
 /** Auto-shrink long text so a user's words never spill outside the design. */
@@ -56,6 +66,54 @@ function TextView({ el }: { el: TextElement }) {
     el.text, el.width, el.height, el.fontFamily, el.fontWeight, el.lineHeight, el.letterSpacing, el.uppercase,
   ]);
   const hl = el.highlight;
+  const scriptPos = el.scriptPosition || 'normal';
+  const effect = el.textEffect;
+
+  const textStyle: React.CSSProperties = {
+    fontFamily: `"${el.fontFamily}", sans-serif`,
+    fontSize: scriptPos === 'normal' ? fs : fs * 0.68,
+    fontWeight: el.fontWeight,
+    fontStyle: el.italic ? 'italic' : 'normal',
+    textAlign: el.align,
+    color: el.color,
+    lineHeight: el.lineHeight,
+    letterSpacing: el.letterSpacing,
+    textTransform: el.uppercase ? 'uppercase' : 'none',
+    fontKerning: el.kerning === false ? 'none' : 'normal',
+    textDecorationLine: el.underline && el.strikethrough ? 'underline line-through' : el.underline ? 'underline' : el.strikethrough ? 'line-through' : 'none',
+    verticalAlign: scriptPos === 'super' ? 'super' : scriptPos === 'sub' ? 'sub' : 'baseline',
+    width: hl ? undefined : '100%',
+    maxWidth: '100%',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+    position: 'relative',
+    WebkitTextStrokeWidth: effect?.kind === 'outline' ? `${effect.thickness}px` : undefined,
+    WebkitTextStrokeColor: effect?.kind === 'outline' ? effect.color : undefined,
+    paintOrder: effect?.kind === 'outline' ? 'stroke fill' : undefined,
+    textShadow: effect?.kind === 'neon'
+      ? `0 0 ${effect.thickness}px ${effect.color}, 0 0 ${effect.thickness * 2}px ${effect.color}, 0 0 ${effect.thickness * 4}px ${effect.color}`
+      : undefined,
+    ...(hl
+      ? { background: hl.color, padding: `${hl.padY}px ${hl.padX}px`, borderRadius: hl.radius, display: 'inline-block' }
+      : {}),
+  };
+
+  const lines = el.text.split('\n');
+  const content =
+    el.list && el.list !== 'none' ? (
+      el.list === 'bullet' ? (
+        <ul style={{ margin: 0, paddingInlineStart: '1.1em' }}>
+          {lines.map((ln, i) => <li key={i}>{ln}</li>)}
+        </ul>
+      ) : (
+        <ol style={{ margin: 0, paddingInlineStart: '1.3em' }}>
+          {lines.map((ln, i) => <li key={i}>{ln}</li>)}
+        </ol>
+      )
+    ) : (
+      el.text
+    );
+
   return (
     <div
       ref={bRef}
@@ -66,28 +124,16 @@ function TextView({ el }: { el: TextElement }) {
         ...shadowStyle(el),
       }}
     >
-      <div
-        ref={tRef}
-        style={{
-          fontFamily: `"${el.fontFamily}", sans-serif`,
-          fontSize: fs,
-          fontWeight: el.fontWeight,
-          fontStyle: el.italic ? 'italic' : 'normal',
-          textAlign: el.align,
-          color: el.color,
-          lineHeight: el.lineHeight,
-          letterSpacing: el.letterSpacing,
-          textTransform: el.uppercase ? 'uppercase' : 'none',
-          width: hl ? undefined : '100%',
-          maxWidth: '100%',
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-          ...(hl
-            ? { background: hl.color, padding: `${hl.padY}px ${hl.padX}px`, borderRadius: hl.radius, display: 'inline-block' }
-            : {}),
-        }}
-      >
-        {el.text}
+      {effect?.kind === 'echo' && (
+        <div
+          aria-hidden
+          style={{ ...textStyle, WebkitTextStroke: undefined, position: 'absolute', color: effect.color, transform: `translate(${effect.thickness}px, ${effect.thickness}px)`, zIndex: -1 }}
+        >
+          {content}
+        </div>
+      )}
+      <div ref={tRef} style={textStyle}>
+        {content}
       </div>
     </div>
   );
@@ -118,6 +164,195 @@ function Placeholder({ kind }: { kind: string }) {
       <rect width="48" height="48" fill={bg} />
       <circle cx="16" cy="17" r="4" fill={fg} />
       <path d="M4 40l12-13 8 9 6-6 14 15z" fill={fg} />
+    </svg>
+  );
+}
+
+export function ShapeView({ el }: { el: ShapeElement }) {
+  const w = Math.max(1, el.width);
+  const h = Math.max(1, el.height);
+  const sw = Math.max(0, el.strokeWidth || 0);
+  const strokeOpacity = el.strokeOpacity !== undefined ? el.strokeOpacity : 1;
+  const strokeColor = sw > 0 ? rgba(el.strokeColor || '#12131A', strokeOpacity) : 'none';
+  const fillOpacity = el.fillOpacity !== undefined ? el.fillOpacity : 1;
+  const fillColor = rgba(el.fill || '#12131A', fillOpacity);
+  const strokeDash = el.strokeStyle === 'dashed' ? `${Math.max(6, sw * 2)} ${Math.max(4, sw * 1.5)}` : undefined;
+
+  const hasImage = !!el.imageFill && el.imageFill.src;
+  const fillId = `fill-${el.id}`;
+  const actualFill = hasImage ? `url(#${fillId})` : fillColor;
+
+  const renderDefs = () => {
+    if (!hasImage) return null;
+    const img = el.imageFill!;
+    const zoom = Math.max(1, img.zoom || 1);
+    // Cover-fit the image at this zoom level using pure SVG geometry (no CSS
+    // transform on an <image> inside a <pattern> — transform-origin on SVG
+    // children of a pattern resolves inconsistently across browsers, which
+    // is what made panning/zooming behave unpredictably here before).
+    const bw = w * zoom;
+    const bh = h * zoom;
+    const baseX = (w - bw) / 2;
+    const baseY = (h - bh) / 2;
+    const maxPanX = Math.max(0, (bw - w) / 2);
+    const maxPanY = Math.max(0, (bh - h) / 2);
+    const panX = ((img.offsetX || 0) / 50) * maxPanX;
+    const panY = ((img.offsetY || 0) / 50) * maxPanY;
+    return (
+      <defs>
+        <pattern id={fillId} patternUnits="userSpaceOnUse" width={w} height={h}>
+          <image
+            href={img.src}
+            x={baseX - panX}
+            y={baseY - panY}
+            width={bw}
+            height={bh}
+            preserveAspectRatio="xMidYMid slice"
+          />
+        </pattern>
+      </defs>
+    );
+  };
+
+  const innerW = Math.max(1, w - sw);
+  const innerH = Math.max(1, h - sw);
+  const cx = w / 2;
+  const cy = h / 2;
+  const rx = Math.max(1, innerW / 2);
+  const ry = Math.max(1, innerH / 2);
+
+  if (el.shape === 'circle') {
+    return (
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height: '100%', display: 'block', overflow: 'visible', ...shadowStyle(el) }}>
+        {renderDefs()}
+        <ellipse
+          cx={cx}
+          cy={cy}
+          rx={rx}
+          ry={ry}
+          fill={actualFill}
+          stroke={strokeColor}
+          strokeWidth={sw}
+          strokeDasharray={strokeDash}
+        />
+      </svg>
+    );
+  }
+
+  if (el.shape === 'pill') {
+    const pillR = Math.min(innerW, innerH) / 2;
+    return (
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height: '100%', display: 'block', overflow: 'visible', ...shadowStyle(el) }}>
+        {renderDefs()}
+        <rect
+          x={sw / 2}
+          y={sw / 2}
+          width={innerW}
+          height={innerH}
+          rx={pillR}
+          ry={pillR}
+          fill={actualFill}
+          stroke={strokeColor}
+          strokeWidth={sw}
+          strokeDasharray={strokeDash}
+        />
+      </svg>
+    );
+  }
+
+  if (el.shape === 'line') {
+    const lineH = Math.max(sw, 2);
+    return (
+      <svg width={w} height={lineH} viewBox={`0 0 ${w} ${lineH}`} style={{ width: '100%', height: '100%', display: 'block', overflow: 'visible', ...shadowStyle(el) }}>
+        <line
+          x1={0}
+          y1={lineH / 2}
+          x2={w}
+          y2={lineH / 2}
+          stroke={strokeColor !== 'none' ? strokeColor : fillColor}
+          strokeWidth={lineH}
+          strokeDasharray={strokeDash}
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+
+  if (
+    el.shape === 'triangle' ||
+    el.shape === 'pentagon' ||
+    el.shape === 'hexagon' ||
+    el.shape === 'octagon' ||
+    el.shape === 'star' ||
+    el.shape === 'polygon'
+  ) {
+    let points: string;
+    if (el.shape === 'star') {
+      const pts: string[] = [];
+      const numPoints = 5;
+      for (let i = 0; i < numPoints * 2; i++) {
+        const isOuter = i % 2 === 0;
+        const curRx = isOuter ? rx : rx * 0.42;
+        const curRy = isOuter ? ry : ry * 0.42;
+        const angle = -Math.PI / 2 + (i * Math.PI) / numPoints;
+        pts.push(`${cx + curRx * Math.cos(angle)},${cy + curRy * Math.sin(angle)}`);
+      }
+      points = pts.join(' ');
+    } else {
+      const sides =
+        el.shape === 'triangle'
+          ? 3
+          : el.shape === 'pentagon'
+          ? 5
+          : el.shape === 'hexagon'
+          ? 6
+          : el.shape === 'octagon'
+          ? 8
+          : Math.max(3, el.sides || 5);
+
+      const pts: string[] = [];
+      for (let i = 0; i < sides; i++) {
+        const angle = -Math.PI / 2 + (2 * Math.PI * i) / sides;
+        pts.push(`${cx + rx * Math.cos(angle)},${cy + ry * Math.sin(angle)}`);
+      }
+      points = pts.join(' ');
+    }
+
+    return (
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height: '100%', display: 'block', overflow: 'visible', ...shadowStyle(el) }}>
+        {renderDefs()}
+        <polygon
+          points={points}
+          fill={actualFill}
+          stroke={strokeColor}
+          strokeWidth={sw}
+          strokeDasharray={strokeDash}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+
+  // Default: Rectangle with corner radius
+  const maxR = Math.min(innerW, innerH) / 2;
+  const radius = Math.min(maxR, Math.max(0, el.radius || 0));
+
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height: '100%', display: 'block', overflow: 'visible', ...shadowStyle(el) }}>
+      {renderDefs()}
+      <rect
+        x={sw / 2}
+        y={sw / 2}
+        width={innerW}
+        height={innerH}
+        rx={radius}
+        ry={radius}
+        fill={actualFill}
+        stroke={strokeColor}
+        strokeWidth={sw}
+        strokeDasharray={strokeDash}
+      />
     </svg>
   );
 }
@@ -157,19 +392,7 @@ export function ElementView({ el }: { el: DesignElement }) {
   }
 
   if (el.type === 'shape') {
-    const radius = el.shape === 'circle' ? '50%' : el.shape === 'pill' ? 9999 : el.radius;
-    return (
-      <div
-        style={{
-          width: '100%',
-          height: el.shape === 'line' ? Math.max(1, el.height) : '100%',
-          background: rgba(el.fill, el.fillOpacity),
-          borderRadius: radius,
-          border: el.strokeWidth ? `${el.strokeWidth}px solid ${el.strokeColor}` : 'none',
-          ...shadowStyle(el),
-        }}
-      />
-    );
+    return <ShapeView el={el} />;
   }
 
   return <div style={{ width: '100%', height: '100%', ...shadowStyle(el) }}><Decor el={el} /></div>;

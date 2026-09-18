@@ -5,22 +5,15 @@ export function Sheet({
   title, onClose, children, footer,
 }: { title: string; onClose: () => void; children: React.ReactNode; footer?: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end" onPointerDown={onClose}>
-      <div className="absolute inset-0 bg-ink/35" />
-      <div
-        className="relative bg-surface rounded-t-[28px] max-h-[82vh] flex flex-col sheet-in"
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-5 pt-4 pb-3">
-          <div className="w-9" />
-          <h3 className="text-[15px] font-bold text-ink">{title}</h3>
-          <button onClick={onClose} className="w-9 h-9 rounded-full bg-canvasbg grid place-items-center text-ink-2">
-            <IcClose size={18} />
-          </button>
-        </div>
-        <div className="overflow-y-auto px-5 pb-5 no-scrollbar">{children}</div>
-        {footer && <div className="px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 border-t border-line">{footer}</div>}
+    <div className="relative bg-surface flex flex-col border-t border-line" style={{ maxHeight: '45vh' }}>
+      <div className="flex items-center justify-between px-5 pt-3 pb-2 shrink-0">
+        <h3 className="text-[14px] font-bold text-ink">{title}</h3>
+        <button onClick={onClose} className="w-8 h-8 rounded-full bg-canvasbg grid place-items-center text-ink active:bg-line transition-colors">
+          <IcClose size={18} />
+        </button>
       </div>
+      <div className="overflow-y-auto px-5 pb-5 no-scrollbar flex-1">{children}</div>
+      {footer && <div className="px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 border-t border-line shrink-0">{footer}</div>}
     </div>
   );
 }

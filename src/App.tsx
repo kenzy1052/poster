@@ -27,6 +27,21 @@ export default function App() {
   }, [currentId]);
 
   const start = (templateId: string) => {
+    if (templateId.startsWith('custom-')) {
+      const customTemplates = useStore.getState().customTemplates;
+      const ct = customTemplates.find((c) => c.id === templateId);
+      if (ct) {
+        create({
+          templateId: ct.id,
+          canvas,
+          background: JSON.parse(JSON.stringify(ct.background)),
+          elements: JSON.parse(JSON.stringify(ct.elements)),
+          name: ct.name,
+        });
+        setScreen('editor');
+        return;
+      }
+    }
     const d = templateId === 'blank' ? blankDesign(canvas) : getTemplate(templateId)?.build(canvas);
     if (!d) return;
     create({

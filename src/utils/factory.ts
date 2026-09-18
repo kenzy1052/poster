@@ -5,7 +5,7 @@ import {
 } from '../types';
 
 const base = () => ({
-  id: uuid(), rotation: 0, z: 1, hidden: false, locked: false, opacity: 1, shadow: noShadow(),
+  id: uuid(), rotation: 0, z: 1, hidden: false, locked: false, opacity: 1, shadow: noShadow(), blur: 0,
 });
 
 export const text = (role: ElementRole, o: Partial<TextElement> = {}): TextElement => ({
@@ -25,7 +25,13 @@ export const text = (role: ElementRole, o: Partial<TextElement> = {}): TextEleme
   lineHeight: 1.2,
   letterSpacing: 0,
   uppercase: false,
-  autoFit: true,
+  autoFit: false,
+  underline: false,
+  strikethrough: false,
+  kerning: true,
+  list: 'none',
+  scriptPosition: 'normal',
+  textEffect: { kind: 'none', color: '#000000', thickness: 8 },
   ...o,
 });
 
@@ -54,12 +60,16 @@ export const shape = (o: Partial<ShapeElement> = {}): ShapeElement => ({
   role: 'panel',
   name: o.name || 'Shape',
   x: 0, y: 0, width: 200, height: 200,
-  shape: 'rect',
-  fill: '#12131A',
-  fillOpacity: 1,
-  radius: 0,
-  strokeColor: '#12131A',
-  strokeWidth: 0,
+  shape: o.shape || 'rect',
+  fill: o.fill || '#F02D63',
+  fillOpacity: o.fillOpacity !== undefined ? o.fillOpacity : 1,
+  radius: o.radius || 0,
+  strokeColor: o.strokeColor || '#12131A',
+  strokeWidth: o.strokeWidth || 0,
+  strokeOpacity: o.strokeOpacity !== undefined ? o.strokeOpacity : 1,
+  strokeStyle: o.strokeStyle || 'solid',
+  sides: o.sides || 5,
+  lockAspectRatio: o.lockAspectRatio ?? false,
   ...o,
 });
 

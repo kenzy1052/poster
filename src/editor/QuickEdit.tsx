@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { DesignElement, Project, ProfileMode } from '../types';
 import { useStore } from '../store/useStore';
-import { BigButton, ColorPicker, Seg, Sheet, UploadButton } from './kit';
+import { BigButton, ColorPicker, Seg, Sheet, Slider, UploadButton } from './kit';
+import { BackgroundCropModal } from './BackgroundCropModal';
+import { Crop } from 'lucide-react';
 import {
   IcAt, IcAvatar, IcImage, IcPalette, IcType, IcTrash, IcCheck, IcTap,
 } from '../ui/icons';
@@ -23,6 +25,7 @@ export function QuickEdit({
   onReplaceImage: (id: string) => void;
 }) {
   const [view, setView] = useState<Target>('menu');
+  const [bgCropOpen, setBgCropOpen] = useState(false);
   const setBackground = useStore((s) => s.setBackground);
   const snapshot = useStore((s) => s.snapshot);
 
@@ -82,10 +85,49 @@ export function QuickEdit({
     return (
       <Sheet title="Background" onClose={onClose}>
         <div className="pb-2">
-          <ColorPicker
-            value={project.background.color}
-            onChange={(c) => { snapshot(); setBackground({ kind: 'solid', color: c }); }}
-          />
+          {project.background.kind === 'solid' ? (
+            <ColorPicker
+              value={project.background.color}
+              onChange={(c) => { snapshot(); setBackground({ kind: 'solid', color: c }); }}
+            />
+          ) : (
+            <div className="space-y-4 mb-4">
+              <button
+                onClick={() => setBgCropOpen(true)}
+                className="w-full h-12 rounded-2xl bg-brand text-white font-bold text-[14px] flex items-center justify-center gap-2 active:bg-brand-dark"
+              >
+                <Crop size={18} />
+                <span>Open interactive crop & pan</span>
+              </button>
+              <Slider
+                label="Zoom (Background Photo)"
+                value={project.background.image.zoom || 1}
+                min={1} max={3} step={0.02}
+                onChange={(v) => {
+                  snapshot();
+                  setBackground({ kind: 'image', image: { ...project.background.image, zoom: v } });
+                }}
+              />
+              <Slider
+                label="Move sideways"
+                value={project.background.image.offsetX || 0}
+                min={-50} max={50}
+                onChange={(v) => {
+                  snapshot();
+                  setBackground({ kind: 'image', image: { ...project.background.image, offsetX: v } });
+                }}
+              />
+              <Slider
+                label="Move up / down"
+                value={project.background.image.offsetY || 0}
+                min={-50} max={50}
+                onChange={(v) => {
+                  snapshot();
+                  setBackground({ kind: 'image', image: { ...project.background.image, offsetY: v } });
+                }}
+              />
+            </div>
+          )}
           <div className="mt-4">
             <UploadButton
               label="Use a photo instead"
@@ -104,6 +146,19 @@ export function QuickEdit({
             </button>
           )}
         </div>
+
+        {bgCropOpen && project.background.kind === 'image' && project.background.image.src && (
+          <BackgroundCropModal
+            src={project.background.image.src}
+            canvas={project.canvas}
+            initial={project.background.image}
+            onApply={({ zoom, offsetX, offsetY }) => {
+              snapshot();
+              setBackground({ kind: 'image', image: { ...project.background.image, zoom, offsetX, offsetY } });
+            }}
+            onClose={() => setBgCropOpen(false)}
+          />
+        )}
       </Sheet>
     );
   }

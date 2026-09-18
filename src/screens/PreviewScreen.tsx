@@ -24,7 +24,7 @@ export function PreviewScreen({ onBack }: { onBack: () => void }) {
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 2400);
+    const t = setTimeout(() => setToast(null), 5000);
     return () => clearTimeout(t);
   }, [toast]);
 
@@ -54,24 +54,27 @@ export function PreviewScreen({ onBack }: { onBack: () => void }) {
       </header>
 
       <div className="flex-1 overflow-y-auto p-5 no-scrollbar">
-        <div className="max-w-sm mx-auto rounded-3xl overflow-hidden bg-surface border border-line">
-          <div ref={wrapRef} className="w-full relative" style={{ height: project.canvas.height * scale }}>
-            <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', position: 'absolute' }}>
-              <StaticDesign project={project} />
+        <p className="text-center text-[12px] font-semibold text-ink-3 mb-4">This is exactly what gets exported — nothing else is added.</p>
+
+        {!jpeg ? (
+          <div className="max-w-sm mx-auto rounded-3xl overflow-hidden bg-surface shadow-md">
+            <div ref={wrapRef} className="w-full relative" style={{ height: project.canvas.height * scale }}>
+              <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', position: 'absolute' }}>
+                <StaticDesign project={project} />
+              </div>
             </div>
           </div>
-        </div>
-        <p className="text-center text-[11.5px] text-ink-3 mt-3">This is exactly what gets exported — nothing else is added.</p>
-
-        {jpeg && (
-          <div className="max-w-sm mx-auto mt-6">
-            <div className="flex items-center gap-2 text-[13px] font-bold text-mint mb-2"><IcCheck size={16} /> Ready to post</div>
-            <img src={jpeg} className="w-full rounded-2xl border border-line" />
+        ) : (
+          <div className="max-w-sm mx-auto animate-fade-in">
+            <div className="flex items-center gap-2 text-[14px] font-bold text-emerald-500 mb-3 justify-center"><IcCheck size={18} /> Ready to post</div>
+            <img src={jpeg} className="w-full rounded-2xl shadow-xl border border-line" alt="Export preview" />
           </div>
         )}
       </div>
 
-      <div style={{ position: 'fixed', top: 0, left: 0, opacity: 0, pointerEvents: 'none', zIndex: -1 }}>
+      {/* Off-screen full-resolution render used only for export — must never
+          be visible alongside the on-screen preview above. */}
+      <div style={{ position: 'fixed', top: 0, left: 0, width: 0, height: 0, overflow: 'hidden', opacity: 0, pointerEvents: 'none', zIndex: -1 }}>
         <StaticDesign project={project} innerRef={exportRef} />
       </div>
 

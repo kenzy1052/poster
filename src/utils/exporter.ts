@@ -1,4 +1,4 @@
-import { toJpeg } from 'html-to-image';
+import { toJpeg, toPng } from 'html-to-image';
 
 export async function renderToJpeg(node: HTMLElement, width: number, height: number): Promise<string> {
   // Render at 1:1 device pixels so the export matches the spec dimensions exactly.
@@ -8,6 +8,19 @@ export async function renderToJpeg(node: HTMLElement, width: number, height: num
     height,
     pixelRatio: 1,
     backgroundColor: '#000000',
+    cacheBust: true,
+    style: { transform: 'none', margin: '0' },
+  });
+}
+
+/** Transparent-background PNG export — used for downloading a single layer
+ * (text/shape/image) rather than the whole poster, so it stays cut-out-able. */
+export async function renderToPng(node: HTMLElement, width: number, height: number): Promise<string> {
+  return toPng(node, {
+    quality: 1,
+    width,
+    height,
+    pixelRatio: 2,
     cacheBust: true,
     style: { transform: 'none', margin: '0' },
   });
