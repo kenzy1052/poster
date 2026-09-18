@@ -33,7 +33,7 @@ export function measureTextBox(
     measure.style.width = 'max-content';
   }
 
-  measure.innerText = el.text || ' ';
+  measure.textContent = el.text || ' ';
   document.body.appendChild(measure);
   const bounds = measure.getBoundingClientRect();
   document.body.removeChild(measure);

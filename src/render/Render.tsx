@@ -59,7 +59,7 @@ function useFit(
   return on ? size : requested;
 }
 
-function TextView({ el }: { el: TextElement }) {
+const TextView = React.memo(function TextView({ el }: { el: TextElement }) {
   const tRef = React.useRef<HTMLDivElement>(null);
   const bRef = React.useRef<HTMLDivElement>(null);
   const fs = useFit(tRef, bRef, el.fontSize, el.autoFit, [
@@ -137,7 +137,7 @@ function TextView({ el }: { el: TextElement }) {
       </div>
     </div>
   );
-}
+});
 
 function Placeholder({ kind }: { kind: string }) {
   const bg = '#D7D9DE', fg = '#A8ACB5';
@@ -291,7 +291,7 @@ export function ShapeView({ el }: { el: ShapeElement }) {
   );
 }
 
-export function ElementView({ el }: { el: DesignElement }) {
+export const ElementView = React.memo(function ElementView({ el }: { el: DesignElement }) {
   if (el.type === 'text') return <TextView el={el} />;
 
   if (el.type === 'image') {
@@ -337,9 +337,9 @@ export function ElementView({ el }: { el: DesignElement }) {
   }
 
   return <div style={{ width: '100%', height: '100%', ...shadowStyle(el) }}><Decor el={el} /></div>;
-}
+});
 
-export function BackgroundView({ bg }: { bg: Background }) {
+export const BackgroundView = React.memo(function BackgroundView({ bg }: { bg: Background }) {
   if (bg.kind === 'solid') {
     return <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, background: bg.color }} />;
   }
@@ -367,7 +367,7 @@ export function BackgroundView({ bg }: { bg: Background }) {
       )}
     </div>
   );
-}
+});
 
 /** Non-interactive full-resolution render — thumbnails and export. */
 export function StaticDesign({ project, innerRef }: { project: Project; innerRef?: React.Ref<HTMLDivElement> }) {

@@ -1,9 +1,60 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuid } from 'uuid';
 import { Background, CanvasSize, CustomTemplate, DesignElement, Project, ProfileMode } from '../types';
 
 type Snapshot = { background: Background; elements: DesignElement[] };
+
+// Debounced localStorage writer so dragging/moving does not choke low-RAM mobile devices with synchronous JSON stringification
+let pendingKey: string | null = null;
+let pendingVal: string | null = null;
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+const flushStorage = () => {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+  }
+  if (pendingKey && pendingVal !== null) {
+    try {
+      localStorage.setItem(pendingKey, pendingVal);
+    } catch (e) {
+      console.warn('Storage write failed', e);
+    }
+    pendingKey = null;
+    pendingVal = null;
+  }
+};
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', flushStorage);
+  window.addEventListener('pagehide', flushStorage);
+}
+
+const debouncedStorage = {
+  getItem: (name: string) => {
+    if (pendingKey === name && pendingVal !== null) {
+      return pendingVal;
+    }
+    return localStorage.getItem(name);
+  },
+  setItem: (name: string, value: string) => {
+    pendingKey = name;
+    pendingVal = value;
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      flushStorage();
+    }, 400);
+  },
+  removeItem: (name: string) => {
+    if (pendingKey === name) {
+      pendingKey = null;
+      pendingVal = null;
+    }
+    if (debounceTimer) clearTimeout(debounceTimer);
+    localStorage.removeItem(name);
+  },
+};
 
 interface State {
   projects: Project[];
@@ -36,6 +87,7 @@ interface State {
 
   select: (id: string | null) => void;
   update: (id: string, patch: Partial<DesignElement>) => void;
+  updateMany: (patches: { id: string; patch: Partial<DesignElement> }[]) => void;
   add: (el: DesignElement) => void;
   del: (id: string) => void;
   duplicate: (id: string) => void;
@@ -178,6 +230,20 @@ export const useStore = create<State>()(
             ...p, elements: p.elements.map((e) => (e.id === id ? ({ ...e, ...patch } as DesignElement) : e)),
           })),
         })),
+
+      updateMany: (patches) => {
+        if (!patches.length) return;
+        const patchMap = new Map(patches.map((p) => [p.id, p.patch]));
+        set((s) => ({
+          projects: patchProjects(s.projects, s.currentId, (p) => ({
+            ...p,
+            elements: p.elements.map((e) => {
+              const pItem = patchMap.get(e.id);
+              return pItem ? ({ ...e, ...pItem } as DesignElement) : e;
+            }),
+          })),
+        }));
+      },
 
       add: (el) => {
         get().snapshot();
@@ -339,6 +405,7 @@ export const useStore = create<State>()(
     }),
     {
       name: 'ig-post-studio',
+      storage: createJSONStorage(() => debouncedStorage),
       partialize: (s) => ({
         projects: s.projects,
         customTemplates: s.customTemplates,

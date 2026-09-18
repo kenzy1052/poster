@@ -53,10 +53,14 @@ export function EditorCanvas({
   const selectedId = useStore((s) => s.selectedId);
   const select = useStore((s) => s.select);
   const update = useStore((s) => s.update);
+  const updateMany = useStore((s) => s.updateMany);
   const snapshot = useStore((s) => s.snapshot);
   const del = useStore((s) => s.del);
   const duplicate = useStore((s) => s.duplicate);
   const reorder = useStore((s) => s.reorder);
+
+  const pendingMove = useRef<{ clientX: number; clientY: number } | null>(null);
+  const rafId = useRef<number | null>(null);
 
   const [fitScale, setFitScale] = useState(0.3);
   const [zoom, setZoom] = useState(1); // multiplier on top of fitScale
@@ -125,10 +129,12 @@ export function EditorCanvas({
   const commitEdit = useCallback(() => {
     if (editingId && textareaRef.current) {
       const el = project.elements.find((e) => e.id === editingId) as TextElement;
-      const cleanText = editText.trim();
+      // Preserve explicit newlines and line breaks created during editing
+      const cleanText = editText.replace(/\r\n/g, '\n').trimEnd();
       if (el && cleanText) {
-        const fit = measureTextBox({ ...el, text: cleanText });
-        update(editingId, { text: cleanText, width: fit.width, height: fit.height, autoFit: false } as any);
+        // Measure with maxWidth constrained to the text box's current width so wrapped lines and newlines are preserved
+        const fit = measureTextBox({ ...el, text: cleanText }, { maxWidth: el.width });
+        update(editingId, { text: cleanText, width: el.width, height: Math.max(fit.height, 20), autoFit: false } as any);
       } else if (el && !cleanText) {
         // If empty, reset
         update(editingId, { text: 'Text', autoFit: false } as any);
@@ -259,30 +265,26 @@ export function EditorCanvas({
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
   };
 
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  useEffect(() => {
+    return () => {
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+    };
+  }, []);
+
+  const performMove = useCallback((clientX: number, clientY: number) => {
     const g = gesture.current;
     if (g.kind === 'none') return;
-    moved.current = true;
-
-    if (g.kind === 'pinch') {
-      if (pointers.current.size < 2) return;
-      const [a, b] = [...pointers.current.values()];
-      const d = Math.hypot(a.x - b.x, a.y - b.y);
-      applyZoom(g.z0 * (d / g.d0), { x: g.ox, y: g.oy });
-      return;
-    }
 
     if (g.kind === 'pan') {
-      setPan(clampPan({ x: g.ox + (e.clientX - g.sx), y: g.oy + (e.clientY - g.sy) }, zoom));
+      setPan(clampPan({ x: g.ox + (clientX - g.sx), y: g.oy + (clientY - g.sy) }, zoom));
       return;
     }
 
     if (g.kind === 'move') {
-      const el = project.elements.find((x) => x.id === g.id)!;
+      const el = project.elements.find((x) => x.id === g.id);
       if (!el) return;
-      let nx = g.ox + (e.clientX - g.sx) / scale;
-      let ny = g.oy + (e.clientY - g.sy) / scale;
+      let nx = g.ox + (clientX - g.sx) / scale;
+      let ny = g.oy + (clientY - g.sy) / scale;
       const next: { x?: number; y?: number } = {};
       const cw = project.canvas.width, ch = project.canvas.height;
 
@@ -294,18 +296,24 @@ export function EditorCanvas({
       if (Math.abs(nx - margin) < SNAP) { nx = margin; next.x = margin; }
       if (Math.abs(nx + el.width - (cw - margin)) < SNAP) { nx = cw - margin - el.width; next.x = cw - margin; }
 
-      setGuides(next);
-      update(g.id, { x: Math.round(nx), y: Math.round(ny) });
+      setGuides((prev) => (prev.x === next.x && prev.y === next.y ? prev : next));
+
+      const updates: { id: string; patch: Partial<DesignElement> }[] = [
+        { id: g.id, patch: { x: Math.round(nx), y: Math.round(ny) } },
+      ];
       if (g.siblings.length) {
         const dx = nx - g.ox, dy = ny - g.oy;
-        for (const sib of g.siblings) update(sib.id, { x: Math.round(sib.ox + dx), y: Math.round(sib.oy + dy) });
+        for (const sib of g.siblings) {
+          updates.push({ id: sib.id, patch: { x: Math.round(sib.ox + dx), y: Math.round(sib.oy + dy) } });
+        }
       }
+      updateMany(updates);
       return;
     }
 
     if (g.kind === 'resize') {
-      const dx = (e.clientX - g.sx) / scale;
-      const dy = (e.clientY - g.sy) / scale;
+      const dx = (clientX - g.sx) / scale;
+      const dy = (clientY - g.sy) / scale;
       let { x, y, w, h } = g.b;
 
       if (g.handle.includes('e')) w = Math.max(16, g.b.w + dx);
@@ -340,15 +348,49 @@ export function EditorCanvas({
     }
 
     if (g.kind === 'rotate') {
-      const now = (Math.atan2(e.clientY - g.cy, e.clientX - g.cx) * 180) / Math.PI;
+      const now = (Math.atan2(clientY - g.cy, clientX - g.cx) * 180) / Math.PI;
       let deg = Math.round(g.from + (now - g.start));
       if (Math.abs(deg % 45) < 4) deg = Math.round(deg / 45) * 45; // snap to 45°
       update(g.id, { rotation: deg });
+    }
+  }, [project, scale, zoom, clampPan, update, updateMany]);
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const g = gesture.current;
+    if (g.kind === 'none') return;
+    moved.current = true;
+
+    if (g.kind === 'pinch') {
+      if (pointers.current.size < 2) return;
+      const [a, b] = [...pointers.current.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      applyZoom(g.z0 * (d / g.d0), { x: g.ox, y: g.oy });
+      return;
+    }
+
+    // Schedule RAF update for silky smooth movement without frame drops on low RAM phones
+    pendingMove.current = { clientX: e.clientX, clientY: e.clientY };
+    if (!rafId.current) {
+      rafId.current = requestAnimationFrame(() => {
+        rafId.current = null;
+        if (pendingMove.current) {
+          performMove(pendingMove.current.clientX, pendingMove.current.clientY);
+        }
+      });
     }
   };
 
   const onPointerUp = (e: React.PointerEvent) => {
     pointers.current.delete(e.pointerId);
+    if (rafId.current) {
+      cancelAnimationFrame(rafId.current);
+      rafId.current = null;
+    }
+    if (pendingMove.current) {
+      performMove(pendingMove.current.clientX, pendingMove.current.clientY);
+      pendingMove.current = null;
+    }
     const g = gesture.current;
 
     // Single tap vs Double tap:
@@ -581,33 +623,43 @@ function Selection({
         style={{ pointerEvents: 'auto', cursor: 'move' }}
       />
 
-      {/* 8 Resizing handles */}
+      {/* 8 Resizing handles - substantially smaller and clearly distinguished */}
       {handles.map((h) => {
         const isCorner = h.length === 2;
-        const style: React.CSSProperties = { position: 'absolute', pointerEvents: 'auto', touchAction: 'none' };
-        if (h.includes('n')) style.top = -10;
-        else if (h.includes('s')) style.bottom = -10;
-        else { style.top = '50%'; style.marginTop = -10; }
-
-        if (h.includes('w')) style.left = -10;
-        else if (h.includes('e')) style.right = -10;
-        else { style.left = '50%'; style.marginLeft = -10; }
-
         const isEW = h === 'w' || h === 'e';
         const isNS = h === 'n' || h === 's';
+
+        const style: React.CSSProperties = { position: 'absolute', pointerEvents: 'auto', touchAction: 'none' };
+        if (isCorner) {
+          if (h.includes('n')) style.top = -5;
+          else if (h.includes('s')) style.bottom = -5;
+          if (h.includes('w')) style.left = -5;
+          else if (h.includes('e')) style.right = -5;
+        } else if (isNS) {
+          if (h === 'n') style.top = -2.5;
+          else style.bottom = -2.5;
+          style.left = '50%';
+          style.marginLeft = -7;
+        } else if (isEW) {
+          if (h === 'w') style.left = -2.5;
+          else style.right = -2.5;
+          style.top = '50%';
+          style.marginTop = -7;
+        }
 
         return (
           <div
             key={h}
             data-handle={h}
+            className="before:content-[''] before:absolute before:-inset-2.5 before:z-10"
             style={{
               ...style,
-              width: isCorner ? 26 : isEW ? 14 : 28,
-              height: isCorner ? 26 : isEW ? 28 : 14,
+              width: isCorner ? 10 : isEW ? 5 : 14,
+              height: isCorner ? 10 : isEW ? 14 : 5,
               borderRadius: 999,
               background: '#fff',
-              border: '2px solid #F02D63',
-              boxShadow: '0 2px 5px rgba(18,19,26,.3)',
+              border: '1.5px solid #F02D63',
+              boxShadow: '0 1px 3px rgba(18,19,26,.3)',
               cursor: isCorner ? `${h}-resize` : isEW ? 'ew-resize' : 'ns-resize',
             }}
           />
@@ -617,15 +669,16 @@ function Selection({
       {/* Rotation Knob */}
       <div
         data-handle="rotate"
+        className="before:content-[''] before:absolute before:-inset-2 before:z-10"
         style={{
-          position: 'absolute', bottom: -44, left: '50%', marginLeft: -14,
-          width: 28, height: 28, borderRadius: 999, background: '#fff',
-          border: '2px solid #F02D63', pointerEvents: 'auto', touchAction: 'none',
-          display: 'grid', placeItems: 'center', boxShadow: '0 2px 5px rgba(18,19,26,.3)',
+          position: 'absolute', bottom: -36, left: '50%', marginLeft: -16,
+          width: 22, height: 22, borderRadius: 999, background: '#fff',
+          border: '1.5px solid #F02D63', pointerEvents: 'auto', touchAction: 'none',
+          display: 'grid', placeItems: 'center', boxShadow: '0 1px 4px rgba(18,19,26,.25)',
           cursor: 'grab',
         }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F02D63" strokeWidth="2.2" strokeLinecap="round">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#F02D63" strokeWidth="2.2" strokeLinecap="round">
           <path d="M4.6 12a7.4 7.4 0 1 0 2.2-5.2" /><path d="M4 4.4v4h4" />
         </svg>
       </div>
@@ -633,15 +686,16 @@ function Selection({
       {/* Move Knob (Crosshair) */}
       <div
         data-handle="move"
+        className="before:content-[''] before:absolute before:-inset-2 before:z-10"
         style={{
-          position: 'absolute', bottom: -44, left: '50%', marginLeft: 18,
-          width: 28, height: 28, borderRadius: 999, background: '#fff',
-          border: '2px solid #F02D63', pointerEvents: 'auto', touchAction: 'none',
-          display: 'grid', placeItems: 'center', boxShadow: '0 2px 5px rgba(18,19,26,.3)',
+          position: 'absolute', bottom: -36, left: '50%', marginLeft: 16,
+          width: 22, height: 22, borderRadius: 999, background: '#fff',
+          border: '1.5px solid #F02D63', pointerEvents: 'auto', touchAction: 'none',
+          display: 'grid', placeItems: 'center', boxShadow: '0 1px 4px rgba(18,19,26,.25)',
           cursor: 'move',
         }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F02D63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#F02D63" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="19 9 22 12 19 15"></polyline><polyline points="9 19 12 22 15 19"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line>
         </svg>
       </div>
