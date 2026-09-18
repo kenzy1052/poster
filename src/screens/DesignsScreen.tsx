@@ -1,6 +1,7 @@
 import React from 'react';
 import { useStore } from '../store/useStore';
 import { IcBack, IcFolder, IcTrash } from '../ui/icons';
+import { LiveThumbnail } from '../components/LiveThumbnail';
 
 export function DesignsScreen({ onBack }: { onBack: () => void }) {
   const projects = useStore((s) => s.projects);
@@ -31,9 +32,7 @@ export function DesignsScreen({ onBack }: { onBack: () => void }) {
                 className="w-full rounded-2xl overflow-hidden bg-surface border border-line"
                 style={{ aspectRatio: `${p.canvas.width}/${p.canvas.height}` }}
               >
-                {p.thumbnail
-                  ? <img src={p.thumbnail} className="w-full h-full object-cover" />
-                  : <div className="w-full h-full grid place-items-center text-[11px] text-ink-3">Open</div>}
+                <LiveThumbnail project={p} />
               </button>
               <div className="flex items-center gap-1 mt-1.5">
                 <span className="flex-1 text-[12.5px] font-semibold text-ink truncate">{p.name}</span>

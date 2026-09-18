@@ -7,10 +7,11 @@ import { TemplateScreen } from './screens/TemplateScreen';
 import { EditorScreen } from './screens/EditorScreen';
 import { PreviewScreen } from './screens/PreviewScreen';
 import { DesignsScreen } from './screens/DesignsScreen';
+import { SettingsScreen } from './screens/SettingsScreen';
 import { ProfileSheet } from './editor/QuickEdit';
 import { TEMPLATES, getTemplate, blankDesign } from './utils/templates';
 
-type Screen = 'home' | 'size' | 'template' | 'editor' | 'preview' | 'designs';
+type Screen = 'home' | 'size' | 'template' | 'editor' | 'preview' | 'designs' | 'settings';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
@@ -21,6 +22,26 @@ export default function App() {
   const project = useStore((s) => s.projects.find((p) => p.id === s.currentId));
   const create = useStore((s) => s.create);
   const close = useStore((s) => s.close);
+  const theme = useStore((s) => s.theme);
+
+  useEffect(() => {
+    const applyTheme = () => {
+      const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    };
+    
+    applyTheme();
+
+    if (theme === 'system') {
+      const media = window.matchMedia('(prefers-color-scheme: dark)');
+      media.addEventListener('change', applyTheme);
+      return () => media.removeEventListener('change', applyTheme);
+    }
+  }, [theme]);
 
   useEffect(() => {
     if (currentId && (screen === 'home' || screen === 'designs')) setScreen('editor');
@@ -57,7 +78,7 @@ export default function App() {
         <HomeScreen
           onCreate={() => setScreen('size')}
           onDesigns={() => setScreen('designs')}
-          onProfile={() => setProfileOpen(true)}
+          onProfile={() => setScreen('settings')}
         />
       )}
       {screen === 'size' && <SizeScreen onBack={() => setScreen('home')} onPick={(s) => { setCanvas(s); setScreen('template'); }} />}
@@ -65,6 +86,7 @@ export default function App() {
       {screen === 'editor' && <EditorScreen onBack={() => { close(); setScreen('home'); }} onPreview={() => setScreen('preview')} />}
       {screen === 'preview' && <PreviewScreen onBack={() => setScreen('editor')} />}
       {screen === 'designs' && <DesignsScreen onBack={() => setScreen('home')} />}
+      {screen === 'settings' && <SettingsScreen onBack={() => setScreen('home')} />}
 
       {profileOpen && (
         <ProfileSheet

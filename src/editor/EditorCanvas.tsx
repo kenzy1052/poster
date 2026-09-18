@@ -6,6 +6,8 @@ import { BackgroundView, ElementView } from '../render/Render';
 import { IcCopy, IcSwap, IcTrash, IcUp } from '../ui/icons';
 import { measureTextBox } from '../utils/measureText';
 
+import { renderToJpeg } from '../utils/exporter';
+
 const MIN_Z = 0.4;
 const MAX_Z = 4;
 const SNAP = 14; // canvas px tolerance for centre/edge guides
@@ -25,6 +27,7 @@ export interface CanvasHandle {
   focusOn: (id: string) => void;
   startEditText: (id: string) => void;
   commitEdit: () => void;
+  getThumbnail: () => Promise<string | null>;
 }
 
 interface Props {
@@ -164,6 +167,20 @@ export function EditorCanvas({
       },
       startEditText: (id) => startEdit(id),
       commitEdit: () => commitEdit(),
+      getThumbnail: async () => {
+        if (!stageRef.current) return null;
+        // Temporarily clear scaling for the export
+        const node = stageRef.current.firstElementChild as HTMLElement;
+        if (!node) return null;
+        const oldTransform = node.style.transform;
+        node.style.transform = 'scale(1)';
+        try {
+          const url = await renderToJpeg(node, project.canvas.width, project.canvas.height);
+          return url;
+        } finally {
+          node.style.transform = oldTransform;
+        }
+      },
     };
   }, [handleRef, zoom, applyZoom, project.elements, fitScale, clampPan, select, project.canvas, startEdit, commitEdit]);
 
@@ -171,6 +188,9 @@ export function EditorCanvas({
 
   // ---- gestures ------------------------------------------------------------
   const onPointerDown = (e: React.PointerEvent) => {
+    const target = e.target as Element;
+    if (target.tagName && target.tagName.toLowerCase() === 'textarea') return;
+
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     moved.current = false;
 
@@ -186,7 +206,6 @@ export function EditorCanvas({
       return;
     }
 
-    const target = e.target as HTMLElement;
     // Use closest() rather than reading target.dataset directly — the move
     // and rotate knobs contain an icon, so a tap that lands on the icon
     // itself (not the bare div) was missing the handle and falling through
@@ -309,6 +328,11 @@ export function EditorCanvas({
           h = Math.max(16, Math.round(w / g.ratio));
           if (g.handle.includes('n')) y = g.b.y + g.b.h - h;
         }
+      }
+
+      if (el?.type === 'text') {
+        const fit = measureTextBox({ ...(el as TextElement) }, { maxWidth: Math.round(w) });
+        h = fit.height;
       }
 
       update(g.id, { x: Math.round(x), y: Math.round(y), width: Math.round(w), height: Math.round(h) });
@@ -436,6 +460,7 @@ export function EditorCanvas({
                   height: 'auto',
                   transform: `rotate(${editingEl.rotation}deg)`,
                   zIndex: 9998,
+                  pointerEvents: 'auto',
                   display: 'flex',
                   alignItems: editingEl.vAlign === 'middle' ? 'center' : editingEl.vAlign === 'bottom' ? 'flex-end' : 'flex-start',
                   justifyContent: editingEl.align === 'center' ? 'center' : editingEl.align === 'right' ? 'flex-end' : 'flex-start',
@@ -447,10 +472,8 @@ export function EditorCanvas({
                     value={editText}
                     onChange={(e) => {
                       setEditText(e.target.value);
-                      e.target.style.height = 'auto';
-                      const newHeight = Math.max(editingEl.height, e.target.scrollHeight);
-                      e.target.style.height = `${newHeight}px`;
-                      update(editingEl.id, { text: e.target.value, height: newHeight, autoFit: false } as any);
+                      const fit = measureTextBox({ ...editingEl, text: e.target.value }, { maxWidth: editingEl.width });
+                      update(editingEl.id, { text: e.target.value, height: fit.height, autoFit: false } as any);
                     }}
                     onBlur={commitEdit}
                     onKeyDown={(e) => {
@@ -579,8 +602,8 @@ function Selection({
             data-handle={h}
             style={{
               ...style,
-              width: isCorner ? 18 : isEW ? 10 : 22,
-              height: isCorner ? 18 : isEW ? 22 : 10,
+              width: isCorner ? 26 : isEW ? 14 : 28,
+              height: isCorner ? 26 : isEW ? 28 : 14,
               borderRadius: 999,
               background: '#fff',
               border: '2px solid #F02D63',

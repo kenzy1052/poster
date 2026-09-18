@@ -14,9 +14,11 @@ interface State {
   savedHandle: string;
   savedAvatar: string | null;
   savedProfileMode: ProfileMode;
+  theme: 'light' | 'dark' | 'system';
   past: Snapshot[];
   future: Snapshot[];
 
+  setTheme: (theme: 'light' | 'dark' | 'system') => void;
   create: (o: { templateId: string; canvas: CanvasSize; background: Background; elements: DesignElement[]; name: string }) => string;
   open: (id: string) => void;
   close: () => void;
@@ -54,6 +56,10 @@ interface State {
   setProfileMode: (m: ProfileMode) => void;
   setHandle: (h: string) => void;
   setAvatar: (src: string | null) => void;
+
+  setProjectProfileMode: (m: ProfileMode) => void;
+  setProjectHandle: (h: string) => void;
+  setProjectAvatar: (src: string | null) => void;
 }
 
 const patchProjects = (ps: Project[], id: string | null, fn: (p: Project) => Project) =>
@@ -82,10 +88,13 @@ export const useStore = create<State>()(
       savedHandle: '',
       savedAvatar: null,
       savedProfileMode: 'handle-only',
+      theme: 'light',
       past: [],
       future: [],
       clipboardElement: null,
       clipboardStyle: null,
+
+      setTheme: (theme) => set({ theme }),
 
       saveCustomTemplate: (name: string, tag = 'Custom') => {
         const p = get().current();
@@ -296,27 +305,33 @@ export const useStore = create<State>()(
         }));
       },
 
-      setProfileMode: (mode) => {
+      setProfileMode: (mode) =>
+        set((s) => ({ savedProfileMode: mode })),
+      
+      setHandle: (h) =>
+        set((s) => ({ savedHandle: h })),
+
+      setAvatar: (src) =>
+        set((s) => ({ savedAvatar: src })),
+
+      setProjectProfileMode: (mode) => {
         get().snapshot();
         set((s) => ({
-          savedProfileMode: mode,
           projects: patchProjects(s.projects, s.currentId, (p) => ({
             ...p, profileMode: mode, elements: applyProfile(p.elements, mode, p.handle, p.avatar),
           })),
         }));
       },
 
-      setHandle: (h) =>
+      setProjectHandle: (h) =>
         set((s) => ({
-          savedHandle: h,
           projects: patchProjects(s.projects, s.currentId, (p) => ({
             ...p, handle: h, elements: applyProfile(p.elements, p.profileMode, h, p.avatar),
           })),
         })),
 
-      setAvatar: (src) =>
+      setProjectAvatar: (src) =>
         set((s) => ({
-          savedAvatar: src,
           projects: patchProjects(s.projects, s.currentId, (p) => ({
             ...p, avatar: src, elements: applyProfile(p.elements, p.profileMode, p.handle, src),
           })),

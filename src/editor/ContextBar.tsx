@@ -714,7 +714,7 @@ export function ContextBar({ el, onEditText, onCropImage }: Props) {
               None
             </button>
             <button
-              onClick={() => setWith({ shadow: { enabled: true, color: '#000000', opacity: 0.3, blur: 24, offsetX: 0, offsetY: 10 } })}
+              onClick={() => setWith({ shadow: { enabled: true, color: '#F02D63', opacity: 0.3, blur: 24, offsetX: 0, offsetY: 10 } })}
               className={`h-12 rounded-2xl border text-[12.5px] font-bold ${el.shadow.enabled && (el.shadow.offsetX !== 0 || el.shadow.offsetY !== 0) ? 'bg-ink text-white border-ink' : 'bg-canvasbg border-line text-ink'}`}
             >
               Shadow
@@ -959,7 +959,7 @@ export function ContextBar({ el, onEditText, onCropImage }: Props) {
             ] as const).map(([k, label]) => (
               <button
                 key={k}
-                onClick={() => setWith({ textEffect: { kind: k, color: t.textEffect?.color || (k === 'neon' ? '#39FF88' : '#000000'), thickness: t.textEffect?.thickness || (k === 'outline' ? 2 : k === 'neon' ? 6 : 4) } })}
+                onClick={() => setWith({ textEffect: { kind: k, color: t.textEffect?.color || (k === 'neon' ? '#39FF88' : '#F02D63'), thickness: t.textEffect?.thickness || (k === 'outline' ? 2 : k === 'neon' ? 6 : 4) } })}
                 className={`h-14 rounded-2xl border text-[13.5px] font-bold ${((t.textEffect?.kind || 'none') === k) ? 'bg-ink text-white border-ink' : 'bg-canvasbg border-line text-ink'}`}
               >
                 {label}

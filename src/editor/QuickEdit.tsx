@@ -192,9 +192,9 @@ function Empty({ label }: { label: string }) {
 export function ProfileSheet({
   project, onClose, onBack,
 }: { project: Project; onClose: () => void; onBack?: () => void }) {
-  const setProfileMode = useStore((s) => s.setProfileMode);
-  const setHandle = useStore((s) => s.setHandle);
-  const setAvatar = useStore((s) => s.setAvatar);
+  const setProjectProfileMode = useStore((s) => s.setProjectProfileMode);
+  const setProjectHandle = useStore((s) => s.setProjectHandle);
+  const setProjectAvatar = useStore((s) => s.setProjectAvatar);
   const [draft, setDraft] = useState(project.handle);
 
   const modes: { value: ProfileMode; title: string; sub: string }[] = [
@@ -205,17 +205,18 @@ export function ProfileSheet({
 
   const commitHandle = (v: string) => {
     const clean = v.trim();
-    setHandle(clean ? (clean.startsWith('@') ? clean : `@${clean}`) : '@yourhandle');
+    setProjectHandle(clean ? (clean.startsWith('@') ? clean : `@${clean}`) : '@yourhandle');
   };
 
   return (
     <Sheet title="Profile" onClose={onBack || onClose}>
       <div className="pb-2">
+        <div className="text-[12px] font-semibold text-ink-3 mb-2">Profile on this Design</div>
         <div className="space-y-2">
           {modes.map((m) => (
             <button
               key={m.value}
-              onClick={() => setProfileMode(m.value)}
+              onClick={() => setProjectProfileMode(m.value)}
               className={`w-full flex items-center gap-3 rounded-2xl p-3.5 text-left border-2 transition-colors ${
                 project.profileMode === m.value ? 'border-brand bg-brand-soft' : 'border-transparent bg-canvasbg'
               }`}
@@ -256,9 +257,9 @@ export function ProfileSheet({
                     {project.avatar ? <img src={project.avatar} className="w-full h-full object-cover" /> : <IcAvatar size={26} className="text-ink-3" />}
                   </div>
                   <div className="flex-1 space-y-2">
-                    <UploadButton label={project.avatar ? 'Replace picture' : 'Upload picture'} onFile={(src) => setAvatar(src)} />
+                    <UploadButton label={project.avatar ? 'Replace picture' : 'Upload picture'} onFile={(src) => setProjectAvatar(src)} />
                     {project.avatar && (
-                      <button onClick={() => setAvatar(null)} className="w-full h-11 rounded-2xl bg-canvasbg text-[13px] font-bold text-ink-2 flex items-center justify-center gap-2">
+                      <button onClick={() => setProjectAvatar(null)} className="w-full h-11 rounded-2xl bg-canvasbg text-[13px] font-bold text-ink-2 flex items-center justify-center gap-2">
                         <IcTrash size={16} /> Remove
                       </button>
                     )}

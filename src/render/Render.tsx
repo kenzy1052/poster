@@ -179,40 +179,7 @@ export function ShapeView({ el }: { el: ShapeElement }) {
   const strokeDash = el.strokeStyle === 'dashed' ? `${Math.max(6, sw * 2)} ${Math.max(4, sw * 1.5)}` : undefined;
 
   const hasImage = !!el.imageFill && el.imageFill.src;
-  const fillId = `fill-${el.id}`;
-  const actualFill = hasImage ? `url(#${fillId})` : fillColor;
-
-  const renderDefs = () => {
-    if (!hasImage) return null;
-    const img = el.imageFill!;
-    const zoom = Math.max(1, img.zoom || 1);
-    // Cover-fit the image at this zoom level using pure SVG geometry (no CSS
-    // transform on an <image> inside a <pattern> — transform-origin on SVG
-    // children of a pattern resolves inconsistently across browsers, which
-    // is what made panning/zooming behave unpredictably here before).
-    const bw = w * zoom;
-    const bh = h * zoom;
-    const baseX = (w - bw) / 2;
-    const baseY = (h - bh) / 2;
-    const maxPanX = Math.max(0, (bw - w) / 2);
-    const maxPanY = Math.max(0, (bh - h) / 2);
-    const panX = ((img.offsetX || 0) / 50) * maxPanX;
-    const panY = ((img.offsetY || 0) / 50) * maxPanY;
-    return (
-      <defs>
-        <pattern id={fillId} patternUnits="userSpaceOnUse" width={w} height={h}>
-          <image
-            href={img.src}
-            x={baseX - panX}
-            y={baseY - panY}
-            width={bw}
-            height={bh}
-            preserveAspectRatio="xMidYMid slice"
-          />
-        </pattern>
-      </defs>
-    );
-  };
+  const clipId = `clip-${el.id}`;
 
   const innerW = Math.max(1, w - sw);
   const innerH = Math.max(1, h - sw);
@@ -220,45 +187,6 @@ export function ShapeView({ el }: { el: ShapeElement }) {
   const cy = h / 2;
   const rx = Math.max(1, innerW / 2);
   const ry = Math.max(1, innerH / 2);
-
-  if (el.shape === 'circle') {
-    return (
-      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height: '100%', display: 'block', overflow: 'visible', ...shadowStyle(el) }}>
-        {renderDefs()}
-        <ellipse
-          cx={cx}
-          cy={cy}
-          rx={rx}
-          ry={ry}
-          fill={actualFill}
-          stroke={strokeColor}
-          strokeWidth={sw}
-          strokeDasharray={strokeDash}
-        />
-      </svg>
-    );
-  }
-
-  if (el.shape === 'pill') {
-    const pillR = Math.min(innerW, innerH) / 2;
-    return (
-      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height: '100%', display: 'block', overflow: 'visible', ...shadowStyle(el) }}>
-        {renderDefs()}
-        <rect
-          x={sw / 2}
-          y={sw / 2}
-          width={innerW}
-          height={innerH}
-          rx={pillR}
-          ry={pillR}
-          fill={actualFill}
-          stroke={strokeColor}
-          strokeWidth={sw}
-          strokeDasharray={strokeDash}
-        />
-      </svg>
-    );
-  }
 
   if (el.shape === 'line') {
     const lineH = Math.max(sw, 2);
@@ -278,14 +206,14 @@ export function ShapeView({ el }: { el: ShapeElement }) {
     );
   }
 
-  if (
-    el.shape === 'triangle' ||
-    el.shape === 'pentagon' ||
-    el.shape === 'hexagon' ||
-    el.shape === 'octagon' ||
-    el.shape === 'star' ||
-    el.shape === 'polygon'
-  ) {
+  let shapeElement = null;
+
+  if (el.shape === 'circle') {
+    shapeElement = <ellipse cx={cx} cy={cy} rx={rx} ry={ry} />;
+  } else if (el.shape === 'pill') {
+    const pillR = Math.min(innerW, innerH) / 2;
+    shapeElement = <rect x={sw / 2} y={sw / 2} width={innerW} height={innerH} rx={pillR} ry={pillR} />;
+  } else if (['triangle', 'pentagon', 'hexagon', 'octagon', 'star', 'polygon'].includes(el.shape)) {
     let points: string;
     if (el.shape === 'star') {
       const pts: string[] = [];
@@ -300,14 +228,10 @@ export function ShapeView({ el }: { el: ShapeElement }) {
       points = pts.join(' ');
     } else {
       const sides =
-        el.shape === 'triangle'
-          ? 3
-          : el.shape === 'pentagon'
-          ? 5
-          : el.shape === 'hexagon'
-          ? 6
-          : el.shape === 'octagon'
-          ? 8
+        el.shape === 'triangle' ? 3
+          : el.shape === 'pentagon' ? 5
+          : el.shape === 'hexagon' ? 6
+          : el.shape === 'octagon' ? 8
           : Math.max(3, el.sides || 5);
 
       const pts: string[] = [];
@@ -317,42 +241,52 @@ export function ShapeView({ el }: { el: ShapeElement }) {
       }
       points = pts.join(' ');
     }
-
-    return (
-      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height: '100%', display: 'block', overflow: 'visible', ...shadowStyle(el) }}>
-        {renderDefs()}
-        <polygon
-          points={points}
-          fill={actualFill}
-          stroke={strokeColor}
-          strokeWidth={sw}
-          strokeDasharray={strokeDash}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
+    shapeElement = <polygon points={points} strokeLinejoin="round" strokeLinecap="round" />;
+  } else {
+    const maxR = Math.min(innerW, innerH) / 2;
+    const radius = Math.min(maxR, Math.max(0, el.radius || 0));
+    shapeElement = <rect x={sw / 2} y={sw / 2} width={innerW} height={innerH} rx={radius} ry={radius} />;
   }
-
-  // Default: Rectangle with corner radius
-  const maxR = Math.min(innerW, innerH) / 2;
-  const radius = Math.min(maxR, Math.max(0, el.radius || 0));
 
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height: '100%', display: 'block', overflow: 'visible', ...shadowStyle(el) }}>
-      {renderDefs()}
-      <rect
-        x={sw / 2}
-        y={sw / 2}
-        width={innerW}
-        height={innerH}
-        rx={radius}
-        ry={radius}
-        fill={actualFill}
-        stroke={strokeColor}
-        strokeWidth={sw}
-        strokeDasharray={strokeDash}
-      />
+      <defs>
+        <clipPath id={clipId}>
+          {React.cloneElement(shapeElement as React.ReactElement, { stroke: 'none' })}
+        </clipPath>
+      </defs>
+      
+      <g clipPath={`url(#${clipId})`}>
+        {hasImage ? (
+          <foreignObject x={0} y={0} width={w} height={h}>
+            <div style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+              <img
+                src={el.imageFill!.src}
+                draggable={false}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  minWidth: '100%',
+                  minHeight: '100%',
+                  width: 'auto',
+                  height: 'auto',
+                  transform: `translate(-50%, -50%) translate(${-(el.imageFill!.offsetX || 0)}%, ${-(el.imageFill!.offsetY || 0)}%) scale(${el.imageFill!.zoom || 1})`,
+                }}
+              />
+            </div>
+          </foreignObject>
+        ) : (
+          <rect x={0} y={0} width={w} height={h} fill={fillColor} />
+        )}
+      </g>
+      
+      {React.cloneElement(shapeElement as React.ReactElement, {
+        fill: 'none',
+        stroke: strokeColor,
+        strokeWidth: sw,
+        strokeDasharray: strokeDash
+      })}
     </svg>
   );
 }
@@ -375,9 +309,16 @@ export function ElementView({ el }: { el: DesignElement }) {
             src={el.src}
             draggable={false}
             style={{
-              width: '100%', height: '100%', objectFit: el.fit,
-              objectPosition: `${50 + el.offsetX}% ${50 + el.offsetY}%`,
-              transform: `scale(${el.zoom})`,
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              minWidth: el.fit === 'cover' ? '100%' : '0',
+              minHeight: el.fit === 'cover' ? '100%' : '0',
+              maxWidth: el.fit === 'contain' ? '100%' : 'none',
+              maxHeight: el.fit === 'contain' ? '100%' : 'none',
+              width: 'auto',
+              height: 'auto',
+              transform: `translate(-50%, -50%) translate(${-(el.offsetX || 0)}%, ${-(el.offsetY || 0)}%) scale(${el.zoom || 1})`,
               filter: filt(el.adjust),
             }}
           />
@@ -409,9 +350,14 @@ export function BackgroundView({ bg }: { bg: Background }) {
           src={bg.image.src}
           draggable={false}
           style={{
-            width: '100%', height: '100%', objectFit: 'cover',
-            objectPosition: `${50 + bg.image.offsetX}% ${50 + bg.image.offsetY}%`,
-            transform: `scale(${bg.image.zoom})`,
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            minWidth: '100%',
+            minHeight: '100%',
+            width: 'auto',
+            height: 'auto',
+            transform: `translate(-50%, -50%) translate(${-(bg.image.offsetX || 0)}%, ${-(bg.image.offsetY || 0)}%) scale(${bg.image.zoom || 1})`,
             filter: filt(bg.adjust),
           }}
         />

@@ -70,12 +70,12 @@ export function EditorScreen({ onBack, onPreview }: { onBack: () => void; onPrev
   // of a blank "Open" placeholder, even if the person never opens Preview.
   const handleBack = async () => {
     try {
-      if (thumbRef.current) {
-        const url = await renderToJpeg(thumbRef.current, project.canvas.width, project.canvas.height);
-        setThumb(project.id, url);
+      if (canvasRef.current) {
+        const url = await canvasRef.current.getThumbnail();
+        if (url) setThumb(project.id, url);
       }
     } catch {
-      // Best-effort — never block leaving the editor over a thumbnail.
+      // Best-effort
     }
     onBack();
   };
@@ -313,11 +313,6 @@ export function EditorScreen({ onBack, onPreview }: { onBack: () => void; onPrev
         className="hidden"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.currentTarget.value = ''; }}
       />
-
-      {/* Off-screen render used only to snapshot a thumbnail on the way out. */}
-      <div style={{ position: 'fixed', top: 0, left: 0, opacity: 0, pointerEvents: 'none', zIndex: -1 }}>
-        <StaticDesign project={project} innerRef={thumbRef} />
-      </div>
     </div>
   );
 }

@@ -141,12 +141,15 @@ export function ImageCropModal({ image, onApply, onClose }: Props) {
             <img
               src={image.src}
               draggable={false}
-              className="w-full h-full pointer-events-none"
+              className="pointer-events-none absolute top-1/2 left-1/2"
               style={{
-                objectFit: fit,
-                objectPosition: `${50 + offsetX}% ${50 + offsetY}%`,
-                transform: `scale(${zoom})`,
-                transformOrigin: 'center center',
+                minWidth: fit === 'cover' ? '100%' : '0',
+                minHeight: fit === 'cover' ? '100%' : '0',
+                maxWidth: fit === 'contain' ? '100%' : 'none',
+                maxHeight: fit === 'contain' ? '100%' : 'none',
+                width: 'auto',
+                height: 'auto',
+                transform: `translate(-50%, -50%) translate(${-(offsetX || 0)}%, ${-(offsetY || 0)}%) scale(${zoom})`,
               }}
             />
           )}

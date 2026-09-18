@@ -177,12 +177,13 @@ export function BackgroundCropModal({ src, canvas, initial, onApply, onClose, sh
           <img
             src={src}
             draggable={false}
-            className="w-full h-full pointer-events-none"
+            className="pointer-events-none absolute top-1/2 left-1/2"
             style={{
-              objectFit: 'cover',
-              objectPosition: `${50 + offsetX}% ${50 + offsetY}%`,
-              transform: `scale(${zoom})`,
-              transformOrigin: 'center center',
+              minWidth: '100%',
+              minHeight: '100%',
+              width: 'auto',
+              height: 'auto',
+              transform: `translate(-50%, -50%) translate(${-(offsetX || 0)}%, ${-(offsetY || 0)}%) scale(${zoom})`,
             }}
           />
 

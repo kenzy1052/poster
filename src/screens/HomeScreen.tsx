@@ -1,6 +1,7 @@
 import React from 'react';
 import { useStore } from '../store/useStore';
 import { IcPlus, IcSparkle, IcFolder, IcAt } from '../ui/icons';
+import { LiveThumbnail } from '../components/LiveThumbnail';
 
 export function HomeScreen({ onCreate, onDesigns, onProfile }: { onCreate: () => void; onDesigns: () => void; onProfile: () => void }) {
   const projects = useStore((s) => s.projects);
@@ -40,8 +41,8 @@ export function HomeScreen({ onCreate, onDesigns, onProfile }: { onCreate: () =>
         </button>
         <button onClick={onProfile} className="bg-surface rounded-3xl p-4 text-left active:bg-line/50">
           <span className="w-10 h-10 rounded-2xl bg-canvasbg grid place-items-center text-ink mb-2.5"><IcAt size={20} /></span>
-          <span className="block text-[14px] font-bold text-ink">My handle</span>
-          <span className="block text-[12px] text-ink-3 truncate">{handle || 'Not set yet'}</span>
+          <span className="block text-[14px] font-bold text-ink">Settings</span>
+          <span className="block text-[12px] text-ink-3 truncate">{handle || 'Set your handle'}</span>
         </button>
       </div>
 
@@ -58,9 +59,7 @@ export function HomeScreen({ onCreate, onDesigns, onProfile }: { onCreate: () =>
                   className="rounded-2xl overflow-hidden bg-surface border border-line"
                   style={{ aspectRatio: `${p.canvas.width}/${p.canvas.height}` }}
                 >
-                  {p.thumbnail
-                    ? <img src={p.thumbnail} className="w-full h-full object-cover" />
-                    : <div className="w-full h-full grid place-items-center text-[11px] text-ink-3">Open</div>}
+                  <LiveThumbnail project={p} />
                 </div>
                 <div className="text-[12px] font-semibold text-ink truncate mt-1.5">{p.name}</div>
                 <div className="text-[10.5px] text-ink-3">{p.canvas.label}</div>
