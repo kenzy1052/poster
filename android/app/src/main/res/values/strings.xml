@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Text Post Studio</string>
+    <string name="title_activity_main">Text Post Studio</string>
+    <string name="package_name">com.textpoststudio.app</string>
+    <string name="custom_url_scheme">com.textpoststudio.app</string>
+</resources>
