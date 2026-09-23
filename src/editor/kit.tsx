@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { IcClose } from '../ui/icons';
+import { ImageSourceModal } from '../components/ImageSourceModal';
 
 export function Sheet({
   title, onClose, children, footer,
@@ -112,22 +113,24 @@ export function BigButton({
 export function UploadButton({
   label, onFile, className = '',
 }: { label: string; onFile: (dataUrl: string) => void; className?: string }) {
+  const [modalOpen, setModalOpen] = useState(false);
+
   return (
-    <label className={`flex items-center justify-center gap-2 h-12 rounded-2xl bg-ink text-white text-[14px] font-bold cursor-pointer active:opacity-90 ${className}`}>
-      {label}
-      <input
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-          const r = new FileReader();
-          r.onload = () => onFile(r.result as string);
-          r.readAsDataURL(f);
-          e.currentTarget.value = '';
-        }}
+    <>
+      <button
+        type="button"
+        onClick={() => setModalOpen(true)}
+        className={`flex items-center justify-center gap-2 h-12 rounded-2xl bg-ink text-white text-[14px] font-bold cursor-pointer active:opacity-90 transition-opacity ${className}`}
+      >
+        {label}
+      </button>
+
+      <ImageSourceModal
+        title={label}
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onImageSelected={onFile}
       />
-    </label>
+    </>
   );
 }

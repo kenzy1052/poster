@@ -1,6 +1,7 @@
 import React from 'react';
 import { IcSparkle, IcShapes, IcCheck } from '../ui/icons';
 import { ArrowRight, Wand2, Sliders, X } from 'lucide-react';
+import { EazyPostLogo } from './EazyPostLogo';
 
 interface CreateModeModalProps {
   onSelectSimple: () => void;
@@ -17,7 +18,10 @@ export function CreateModeModal({ onSelectSimple, onSelectAdvanced, onClose }: C
       >
         <div className="flex items-center justify-between pb-4 border-b border-line">
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-brand">Choose Mode</span>
+            <div className="flex items-center gap-1.5 mb-1">
+              <EazyPostLogo size={14} />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-brand">EazyPost Studio</span>
+            </div>
             <h2 className="text-[20px] font-extrabold text-ink">How do you want to create?</h2>
           </div>
           <button

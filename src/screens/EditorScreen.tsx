@@ -9,6 +9,7 @@ import { getTemplate, blankDesign } from '../utils/templates';
 import { ImageElement } from '../types';
 import { StaticDesign } from '../render/Render';
 import { renderToJpeg } from '../utils/exporter';
+import { ImageSourceModal } from '../components/ImageSourceModal';
 import {
   IcBack, IcUndo, IcRedo, IcReset, IcWand, IcPlus, IcAvatar, IcZoomIn, IcZoomOut, IcFit, IcTap,
 } from '../ui/icons';
@@ -48,6 +49,7 @@ export function EditorScreen({ onBack, onPreview }: { onBack: () => void; onPrev
   const [templateName, setTemplateName] = useState('');
   const [templateTag, setTemplateTag] = useState('Custom');
   const [savedToast, setSavedToast] = useState(false);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
 
   if (!project) return null;
   const selected = project.elements.find((e) => e.id === selectedId) || null;
@@ -55,7 +57,7 @@ export function EditorScreen({ onBack, onPreview }: { onBack: () => void; onPrev
 
   const requestImage = (id: string) => {
     pendingImage.current = id;
-    fileRef.current?.click();
+    setImageModalOpen(true);
   };
 
   const onFile = (f: File) => {
@@ -305,6 +307,19 @@ export function EditorScreen({ onBack, onPreview }: { onBack: () => void; onPrev
           </div>
         </div>
       )}
+
+      <ImageSourceModal
+        title="Replace Picture"
+        isOpen={imageModalOpen}
+        onClose={() => setImageModalOpen(false)}
+        onImageSelected={(dataUrl) => {
+          const id = pendingImage.current;
+          if (id) {
+            snapshot();
+            update(id, { src: dataUrl } as any);
+          }
+        }}
+      />
 
       <input
         ref={fileRef}

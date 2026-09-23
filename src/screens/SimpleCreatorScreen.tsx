@@ -12,6 +12,7 @@ import { StaticDesign } from '../render/Render';
 import { renderToJpeg, downloadImage, shareImage } from '../utils/exporter';
 import { StyleTestContainer } from '../components/StyleTestContainer';
 import { BatchGeneratorModal } from '../components/BatchGeneratorModal';
+import { ImageSourceModal } from '../components/ImageSourceModal';
 import {
   IcBack,
   IcAt,
@@ -171,6 +172,8 @@ export function SimpleCreatorScreen({
   const [overlayOpacity, setOverlayOpacity] = useState<number>(0.55);
   const [textColor, setTextColor] = useState<string>(''); // empty string = auto contrast
   const [showTuningBar, setShowTuningBar] = useState(true);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [imageModalTarget, setImageModalTarget] = useState<'bg' | 'avatar'>('bg');
 
   const [activeCategory, setActiveCategory] = useState<DesignCategoryTag>('all');
   const [selectedDesign, setSelectedDesign] = useState<GeneratedDesign | null>(null);
@@ -555,7 +558,11 @@ export function SimpleCreatorScreen({
               {/* Upload Custom Image Button */}
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => bgImageInputRef.current?.click()}
+                  type="button"
+                  onClick={() => {
+                    setImageModalTarget('bg');
+                    setImageModalOpen(true);
+                  }}
                   className="flex-1 py-2.5 px-3 rounded-xl border border-line bg-canvasbg hover:bg-line/40 text-ink font-bold text-[12.5px] flex items-center justify-center gap-2 transition-colors active:scale-[0.99]"
                 >
                   <Upload size={14} className="text-brand" />
@@ -746,8 +753,12 @@ export function SimpleCreatorScreen({
                       )}
                     </div>
                     <button
-                      onClick={() => avatarInputRef.current?.click()}
-                      className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-brand text-white grid place-items-center shadow-xs"
+                      type="button"
+                      onClick={() => {
+                        setImageModalTarget('avatar');
+                        setImageModalOpen(true);
+                      }}
+                      className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-brand text-white grid place-items-center shadow-xs active:scale-95 transition-transform"
                       title="Upload photo"
                     >
                       <Upload size={11} />
@@ -971,6 +982,22 @@ export function SimpleCreatorScreen({
           </div>
         </div>
       )}
+
+      {/* Image Source Selection Modal */}
+      <ImageSourceModal
+        title={imageModalTarget === 'bg' ? 'Upload Background Image' : 'Upload Profile Avatar'}
+        isOpen={imageModalOpen}
+        onClose={() => setImageModalOpen(false)}
+        onImageSelected={(dataUrl) => {
+          if (imageModalTarget === 'bg') {
+            setBgImage(dataUrl);
+            showToast('Custom background image applied!');
+          } else {
+            setAvatar(dataUrl);
+            showToast('Avatar updated!');
+          }
+        }}
+      />
     </div>
   );
 }

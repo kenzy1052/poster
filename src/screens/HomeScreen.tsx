@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { IcPlus, IcSparkle, IcFolder } from '../ui/icons';
 import { LiveThumbnail } from '../components/LiveThumbnail';
 import { CreateModeModal } from '../components/CreateModeModal';
+import { EazyPostLogo } from '../components/EazyPostLogo';
 import { Wand2, Sliders, Settings } from 'lucide-react';
 
 interface HomeScreenProps {
@@ -41,9 +42,9 @@ export function HomeScreen({
       )}
 
       <div className="px-5 pt-[max(1.75rem,env(safe-area-inset-top))] pb-5">
-        <div className="flex items-center gap-1.5 text-brand">
-          <IcSparkle size={17} />
-          <span className="text-[11px] font-bold uppercase tracking-[0.14em]">Post Studio</span>
+        <div className="flex items-center gap-2 text-brand">
+          <EazyPostLogo size={18} />
+          <span className="text-[12px] font-extrabold uppercase tracking-[0.16em] text-brand">EazyPost</span>
         </div>
         <h1 className="text-[30px] leading-[1.12] font-extrabold text-ink mt-1.5">
           Make a post<br />people stop for.

@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.textpoststudio.app',
-  appName: 'Text Post Studio',
+  appId: 'com.eazypost.app',
+  appName: 'EazyPost',
   webDir: 'dist'
 };
 
